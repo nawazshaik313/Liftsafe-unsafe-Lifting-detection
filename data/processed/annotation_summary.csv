@@ -1,0 +1,183 @@
+video,box_width_cm,box_height_cm,box_depth_cm,subject_height_cm,subjective_judgment,one_hand_lifting,multiple_subjects_lifting,subject_age,subject_gender,Note,action_start.video_second,action_start.box_height_cm,action_start.box_distance_horizontal_from_mid_ankles_cm,action_start.hand_vertical_distance_from_floor_cm,action_start.angle_of_asymmetry_degree,action_end.video_second,action_end.box_height_cm,action_end.box_distance_horizontal_from_mid_ankles_cm,action_end.hand_vertical_distance_from_floor_cm,action_end.angle_of_asymmetry_degree,action_start.hand_distance_horizontal_from_mid_ankles_cm,action_end.hand_distance_horizontal_from_mid_ankles_cm
+gd_0006.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,2,0,unknown,unknown,0,5,72,50,unknown,0,,
+gd_0007.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,2,72,50,unknown,0,5,0,unknown,unknown,0,,
+gd_0008.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,2,0,unknown,unknown,0,4,72,50,unknown,0,,
+gd_0009.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,2,72,50,unknown,0,5,0,unknown,unknown,0,,
+gd_0010.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,1,0,unknown,unknown,0,3,72,50,unknown,0,,
+gd_0011.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,1,72,50,unknown,0,3,0,unknown,unknown,0,,
+gd_0012.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,2,0,unknown,unknown,0,4,72,50,unknown,0,,
+gd_0013.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,2,72,50,unknown,0,4,0,unknown,unknown,0,,
+gd_0014.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,2,0,unknown,unknown,0,4,72,50,unknown,0,,
+gd_0015.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,1,72,50,unknown,0,3,0,unknown,unknown,0,,
+gd_0016.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,1,0,unknown,unknown,0,3,72,50,unknown,0,,
+gd_0017.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,2,72,50,unknown,0,4,0,unknown,unknown,0,,
+gd_0018.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,5,0,unknown,unknown,0,7,72,50,unknown,0,,
+gd_0019.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,1,0,unknown,unknown,0,3,72,50,unknown,0,,
+gd_0020.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,1,72,50,unknown,0,3,0,unknown,unknown,0,,
+gd_0021.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,2,0,unknown,unknown,0,4,72,50,unknown,0,,
+gd_0022.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,1,72,50,unknown,0,4,0,unknown,unknown,0,,
+gd_0023.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,2,0,unknown,unknown,0,5,72,50,unknown,0,,
+gd_0024.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,0,72,50,unknown,0,3,0,unknown,unknown,0,,
+gd_0025.mp4,28.7,23.4,24.6,168,unknown,False,False,25.0,M,unknown,2,0,unknown,unknown,0,4,72,50,unknown,0,,
+em_0001.mp4,28.7,23.4,24.6,178,unknown,False,False,25.0,M,unknown,1,72,50,unknown,0,2,0,unknown,unknown,0,,
+em_0002.mp4,28.7,23.4,24.6,178,unknown,False,False,25.0,M,unknown,1,0,unknown,unknown,0,3,72,50,unknown,0,,
+em_0003.mp4,28.7,23.4,24.6,178,unknown,False,False,25.0,M,unknown,1,72,50,unknown,0,3,0,unknown,unknown,0,,
+em_0004.mp4,28.7,23.4,24.6,178,unknown,False,False,25.0,M,unknown,1,0,unknown,unknown,0,3,72,50,unknown,0,,
+em_0005.mp4,28.7,23.4,24.6,178,unknown,False,False,25.0,M,unknown,1,72,50,unknown,0,2,0,unknown,unknown,0,,
+ap_0010.mp4,28.7,23.4,24.6,174,unknown,False,False,25.0,M,unknown,1,72,50,unknown,0,3,0,unknown,unknown,0,,
+ap_0011.mp4,28.7,23.4,24.6,174,unknown,False,False,25.0,M,unknown,2,0,unknown,unknown,0,3,72,50,unknown,0,,
+ap_0012.mp4,28.7,23.4,24.6,174,unknown,False,False,25.0,M,unknown,0,72,50,unknown,0,2,0,unknown,unknown,0,,
+ap_0013.mp4,28.7,23.4,24.6,174,unknown,False,False,25.0,M,unknown,1,0,unknown,unknown,0,2,72,50,unknown,0,,
+ap_0014.mp4,28.7,23.4,24.6,174,unknown,False,False,25.0,M,unknown,1,72,50,unknown,0,2,0,unknown,unknown,0,,
+ap_0015.mp4,28.7,23.4,24.6,174,unknown,False,False,25.0,M,unknown,1,0,unknown,unknown,0,3,72,50,unknown,0,,
+em_0006.mp4,28.7,23.4,24.6,178,unknown,False,False,25.0,M,unknown,3,72,50,unknown,0,5,0,unknown,unknown,0,,
+em_0007.mp4,28.7,23.4,24.6,178,unknown,False,False,25.0,M,unknown,2,0,unknown,unknown,0,4,72,50,unknown,0,,
+em_0008.mp4,28.7,23.4,24.6,178,unknown,False,False,25.0,M,unknown,4,72,50,unknown,0,5,0,unknown,unknown,0,,
+em_0009.mp4,28.7,23.4,24.6,178,unknown,False,False,25.0,M,unknown,1,0,unknown,unknown,0,3,72,50,unknown,0,,
+ap_0016.mp4,28.7,23.4,24.6,174,unknown,False,False,25.0,M,unknown,1,72,50,unknown,0,2,0,unknown,unknown,0,,
+ap_0017.mp4,28.7,23.4,24.6,174,unknown,False,False,25.0,M,unknown,1,0,unknown,unknown,0,3,72,50,unknown,0,,
+ap_0018.mp4,28.7,23.4,24.6,174,unknown,False,False,25.0,M,unknown,1,72,50,unknown,0,3,0,unknown,unknown,0,,
+ap_0019.mp4,28.7,23.4,24.6,174,unknown,False,False,25.0,M,unknown,1,0,unknown,unknown,0,2,72,50,unknown,0,,
+ap_0020.mp4,28.7,23.4,24.6,174,unknown,False,False,25.0,M,unknown,1,72,50,unknown,0,2,0,unknown,unknown,0,,
+ap_0021.mp4,28.7,23.4,24.6,174,unknown,False,False,25.0,M,unknown,1,0,unknown,unknown,0,3,72,50,unknown,0,,
+jv-scrivania-sedia-001.mp4,37.0,33.0,28.0,196,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",1,70,73,103.0,0,4,46,36,79.0,0,,
+jv-scrivania-sedia-002.mp4,37.0,33.0,28.0,196,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",1,46,36,79.0,0,5,70,73,103.0,0,,
+jv-scrivania-sedia-003.mp4,37.0,33.0,28.0,196,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",1,70,73,103.0,0,4,46,36,79.0,0,,
+jv-scrivania-sedia-004.mp4,37.0,33.0,28.0,196,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",1,46,36,79.0,0,4,70,73,103.0,0,,
+jv-scrivania-terra-001.mp4,37.0,33.0,28.0,196,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",1,70,73,103.0,0,4,0,36,33.0,0,,
+jv-scrivania-terra-002.mp4,37.0,33.0,28.0,196,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",1,0,36,33.0,0,5,70,73,103.0,0,,
+jv-scrivania-terra-003.mp4,37.0,33.0,28.0,196,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",1,70,73,103.0,0,4,0,36,33.0,0,,
+jv-scrivania-terra-004.mp4,37.0,33.0,28.0,196,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",1,0,36,33.0,0,4,70,73,103.0,0,,
+md-scrivania-sedia-001.mp4,37.0,33.0,28.0,177,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",1,70,73,103.0,0,5,46,36,79.0,0,,
+md-scrivania-sedia-002.mp4,37.0,33.0,28.0,177,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",1,46,36,79.0,0,4,70,73,103.0,0,,
+md-scrivania-sedia-003.mp4,37.0,33.0,28.0,177,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",2,46,36,79.0,0,4,70,73,103.0,0,,
+md-scrivania-sedia-004.mp4,37.0,33.0,28.0,177,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",2,70,73,103.0,0,4,46,36,79.0,0,,
+md-scrivania-terra-001.mp4,37.0,33.0,28.0,177,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",0,0,36,33.0,0,3,70,73,103.0,0,,
+md-scrivania-terra-002.mp4,37.0,33.0,28.0,177,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",2,70,73,103.0,0,5,0,36,33.0,0,,
+md-scrivania-terra-003.mp4,37.0,33.0,28.0,177,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",2,70,73,103.0,0,5,0,36,33.0,0,,
+md-scrivania-terra-004.mp4,37.0,33.0,28.0,177,unknown,False,False,30.0,M,"The horizontal distances are measured from the central point of the hand, rather than from the box. Box height is measured from the bottom, rather than from the centre.",3,0,36,33.0,0,6,70,73,103.0,0,,
+ah_0001_dg.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,2,75,55,unknown,0,3,0,unknown,unknown,0,,
+ah_0002_gd.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,1,0,unknown,unknown,0,3,75,55,unknown,0,,
+ah_0003_dg.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,1,75,55,unknown,0,2,0,unknown,unknown,0,,
+ah_0004_gd.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,1,0,unknown,unknown,0,3,75,55,unknown,0,,
+ah_0005_dg.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,2,75,55,unknown,0,4,0,unknown,unknown,0,,
+ah_0006_gd.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,1,0,unknown,unknown,0,3,75,55,unknown,0,,
+ah_0007_dg.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,1,75,55,unknown,0,3,0,unknown,unknown,0,,
+ah_0008_gd.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,1,0,unknown,unknown,0,3,75,55,unknown,0,,
+ah_0009_dg.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,1,75,55,unknown,0,3,0,unknown,unknown,0,,
+ll_0001_dg.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,4,75,87,unknown,0,5,0,unknown,unknown,0,,
+ll_0002_gd.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,1,0,unknown,unknown,0,2,75,87,unknown,0,,
+ll_0003_dg.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,2,75,87,unknown,0,3,0,unknown,unknown,0,,
+ll_0004_gd.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,2,0,unknown,unknown,0,2,75,87,unknown,0,,
+ll_0005_gd.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,1,0,unknown,unknown,0,3,75,56,unknown,0,,
+ll_0006_dg.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,0,75,56,unknown,0,2,0,unknown,unknown,0,,
+ll_0007_gd.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,5,0,unknown,unknown,0,7,75,56,unknown,0,,
+ll_0008_dg.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,1,75,56,unknown,0,3,0,unknown,unknown,0,,
+ll_0009_dg.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,1,75,87,unknown,0,2,0,unknown,unknown,0,,
+ll_0010_gd.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,1,0,unknown,unknown,0,2,75,87,unknown,0,,
+ll_0011_dg.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,1,75,87,unknown,0,2,0,unknown,unknown,0,,
+ll_0012_gd.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,2,0,unknown,unknown,0,3,75,87,unknown,0,,
+ll_0013_dg.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,1,75,56,unknown,0,3,0,unknown,unknown,0,,
+ll_0014_gd.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,2,0,unknown,unknown,0,3,75,56,unknown,0,,
+ll_0015_dg.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,1,75,56,unknown,0,3,0,unknown,unknown,0,,
+ll_0016_gd.mp4,25.5,12.8,37.0,184,unknown,False,False,26.0,M,unknown,1,0,unknown,unknown,0,2,75,56,unknown,0,,
+dn_0001_gd.mp4,25.5,12.8,37.0,154,unknown,False,False,26.0,W,unknown,1,0,26,17,0,2,75,52,92,0,,
+dn_0002_dg.mp4,25.5,12.8,37.0,154,unknown,False,False,26.0,W,unknown,2,75,52,92,0,1,0,26,17,0,,
+dn_0003_gd.mp4,25.5,12.8,37.0,154,unknown,False,False,26.0,W,unknown,1,0,26,17,0,2,75,52,92,0,,
+dn_0004_dg.mp4,25.5,12.8,37.0,154,unknown,False,False,26.0,W,unknown,2,75,52,92,0,1,0,26,17,0,,
+dn_0005_gd.mp4,25.5,12.8,37.0,154,unknown,False,False,26.0,W,unknown,1,0,26,17,0,2,75,52,92,0,,
+dn_0006_dg.mp4,25.5,12.8,37.0,154,unknown,False,False,26.0,W,unknown,2,75,52,92,0,1,0,26,17,0,,
+dn_0007_gd.mp4,25.5,12.8,37.0,154,unknown,False,False,26.0,W,unknown,1,0,26,17,0,2,75,52,92,0,,
+dn_0008_dg.mp4,25.5,12.8,37.0,154,unknown,False,False,26.0,W,unknown,2,75,52,92,0,1,0,26,17,0,,
+mp_0001_dg.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,1,75,63,92,0,3,0,36,17,0,,
+mp_0002_gd.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,1,0,36,17,0,2,75,63,92,0,,
+mp_0003_dg.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,1,75,63,92,0,2,0,36,17,0,,
+mp_0003_gd.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,1,0,36,17,0,3,75,63,92,0,,
+mp_0004_dg.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,3,75,63,92,0,5,0,36,17,0,,
+mp_0005_gd.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,1,0,36,17,0,3,75,63,92,0,,
+mp_0006_dg.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,2,75,63,92,0,4,0,36,17,0,,
+mp_0007_gd.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,2,0,36,17,0,3,75,63,92,0,,
+mp_0008_dg.mp4,25.5,12.8,37.0,173,unknown,False,False,26.0,M,unknown,1,75,63,92,0,3,0,36,17,0,,
+pz_0001_gd.mp4,25.5,12.8,37.0,170,unknown,False,False,26.0,W,unknown,1,0,29,17,0,2,75,56,93,0,,
+pz_0002_dg.mp4,25.5,12.8,37.0,170,unknown,False,False,26.0,W,unknown,1,75,56,93,0,2,0,29,17,0,,
+pz_0003_gd.mp4,25.5,12.8,37.0,170,unknown,False,False,26.0,W,unknown,1,0,29,17,0,3,75,56,93,0,,
+pz_0004_dg.mp4,25.5,12.8,37.0,170,unknown,False,False,26.0,W,unknown,1,75,56,93,0,2,0,29,17,0,,
+pz_0005_dg.mp4,25.5,12.8,37.0,170,unknown,False,False,26.0,W,unknown,1,75,56,93,0,3,0,29,17,0,,
+pz_0006_gd.mp4,25.5,12.8,37.0,170,unknown,False,False,26.0,W,unknown,1,0,29,17,0,3,75,56,93,0,,
+pz_0007_dg.mp4,25.5,12.8,37.0,170,unknown,False,False,26.0,W,unknown,1,75,56,93,0,2,0,29,17,0,,
+pz_0008_gd.mp4,25.5,12.8,37.0,170,unknown,False,False,26.0,W,unknown,1,0,29,17,0,2,75,56,93,0,,
+pz_0009_dg.mp4,25.5,12.8,37.0,170,unknown,False,False,26.0,W,unknown,2,75,56,93,0,3,0,29,17,0,,
+rd_0001_dg.mp4,25.5,12.8,37.0,189,unknown,False,False,26.0,M,unknown,2,75,58,94,0,3,0,31,19,0,,
+rd_0002_gd.mp4,25.5,12.8,37.0,189,unknown,False,False,26.0,M,unknown,1,0,31,19,0,2,75,58,94,0,,
+rd_0003_dg.mp4,25.5,12.8,37.0,189,unknown,False,False,26.0,M,unknown,0,75,58,94,0,2,0,31,19,0,,
+rd_0004_gd.mp4,25.5,12.8,37.0,189,unknown,False,False,26.0,M,unknown,1,0,31,19,0,2,75,58,94,0,,
+rd_0005_dg.mp4,25.5,12.8,37.0,189,unknown,False,False,26.0,M,unknown,2,75,58,94,0,4,0,31,19,0,,
+rd_0006_gd.mp4,25.5,12.8,37.0,189,unknown,False,False,26.0,M,unknown,1,0,31,19,0,3,75,58,94,0,,
+rd_0007_dg.mp4,25.5,12.8,37.0,189,unknown,False,False,26.0,M,unknown,1,75,58,94,0,2,0,31,19,0,,
+rd_0008_gd.mp4,25.5,12.8,37.0,189,unknown,False,False,26.0,M,unknown,1,0,31,19,0,2,75,58,94,0,,
+rd_0009_dg.mp4,25.5,12.8,37.0,189,unknown,False,False,26.0,M,unknown,0,75,58,94,0,2,0,31,19,0,,
+ss_0001_dg.mp4,25.5,12.8,37.0,185,unknown,False,False,26.0,M,unknown,1,75,65,92,0,3,0,39,17,0,,
+ss_0002_gd.mp4,25.5,12.8,37.0,185,unknown,False,False,26.0,M,unknown,1,0,39,17,0,3,75,65,92,0,,
+ss_0003_dg.mp4,25.5,12.8,37.0,185,unknown,False,False,26.0,M,unknown,0,75,65,92,0,2,0,39,17,0,,
+ss_0004_dg.mp4,25.5,12.8,37.0,185,unknown,False,False,26.0,M,unknown,2,75,60,92,0,4,0,34,17,0,,
+ss_0005_gd.mp4,25.5,12.8,37.0,185,unknown,False,False,26.0,M,unknown,1,0,34,17,0,3,75,60,92,0,,
+ss_0006_dg.mp4,25.5,12.8,37.0,185,unknown,False,False,26.0,M,unknown,1,75,60,92,0,2,0,34,17,0,,
+ss_0007_gd.mp4,25.5,12.8,37.0,185,unknown,False,False,26.0,M,unknown,1,0,34,17,0,2,75,60,92,0,,
+vp_0001_dg.mp4,25.5,12.8,37.0,163,unknown,False,False,26.0,W,unknown,1,75,61,93,0,2,0,35,18,0,,
+vp_0002_gd.mp4,25.5,12.8,37.0,163,unknown,False,False,26.0,W,unknown,1,0,35,18,0,3,75,61,93,0,,
+vp_0003_dg.mp4,25.5,12.8,37.0,163,unknown,False,False,26.0,W,unknown,2,75,61,93,0,3,0,35,18,0,,
+vp_0004_gd.mp4,25.5,12.8,37.0,163,unknown,False,False,26.0,W,unknown,1,0,35,18,0,3,75,61,93,0,,
+vp_0005_dg.mp4,25.5,12.8,37.0,163,unknown,False,False,26.0,W,unknown,1,75,61,93,0,2,0,35,18,0,,
+vp_0006_dg.mp4,25.5,12.8,37.0,163,unknown,False,False,26.0,W,unknown,3,75,76,91,0,4,0,50,16,0,,
+vp_0007_gd.mp4,25.5,12.8,37.0,163,unknown,False,False,26.0,W,unknown,1,0,50,16,0,2,75,76,91,0,,
+vp_0008_dg.mp4,25.5,12.8,37.0,163,unknown,False,False,26.0,W,unknown,1,75,76,91,0,2,0,50,16,0,,
+vp_0009_gd.mp4,25.5,12.8,37.0,163,unknown,False,False,26.0,W,unknown,2,75,76,91,0,3,0,50,16,0,,
+A. TERRA-CARRIOLA LAT 1.mp4,40.0,33.0,60.0,177,intermediate,False,False,50.0,M,unknown,4,0,26,37,0,9,46,29,83,0,46.0,49.0
+A. TERRA-CARRIOLA LAT 2.mp4,40.0,33.0,60.0,177,intermediate,False,False,50.0,M,unknown,3,0,26,37,0,6,46,29,83,0,46.0,49.0
+A. TERRA-CARRIOLA LAT 3.mp4,40.0,33.0,60.0,177,intermediate,False,False,50.0,M,unknown,4,0,26,37,0,8,46,29,83,0,46.0,49.0
+A. CARRIOLA-TERRA LAT 1.mp4,40.0,33.0,60.0,177,intermediate,False,False,50.0,M,unknown,1,46,29,83,0,5,0,26,37,0,49.0,46.0
+A. CARRIOLA-TERRA LAT 2.mp4,40.0,33.0,60.0,177,intermediate,False,False,50.0,M,unknown,2,46,29,83,0,6,0,26,37,0,49.0,46.0
+A. CARRIOLA-TERRA LAT 3.mp4,40.0,33.0,60.0,177,intermediate,False,False,50.0,M,unknown,2,46,29,83,0,6,0,26,37,0,49.0,46.0
+A. TERRA-CARRIOLA 3quarti 1.mp4,40.0,33.0,60.0,177,unknown,False,False,50.0,M,unknown,2,0,26,37,0,6,46,29,83,0,46.0,49.0
+A. TERRA-CARRIOLA 3quarti 2.mp4,40.0,33.0,60.0,177,unknown,False,False,50.0,M,unknown,2,0,26,37,0,6,46,29,83,0,46.0,49.0
+A. CARRIOLA-TERRA 3quarti 1.mp4,40.0,33.0,60.0,177,unknown,False,False,50.0,M,unknown,1,46,29,83,0,5,0,26,37,0,49.0,46.0
+A. CARRIOLA-TERRA 3quarti 2.mp4,40.0,33.0,60.0,177,unknown,False,False,50.0,M,unknown,2,46,29,83,0,5,0,26,37,0,49.0,46.0
+B. TERRA-CARRIOLA LAT 1.mp4,40.0,33.0,60.0,173,unknown,False,False,31.0,M,unknown,3,0,25,36,0,9,46,29,82,0,45.0,49.0
+B. TERRA-CARRIOLA LAT 2.mp4,40.0,33.0,60.0,173,unknown,False,False,31.0,M,unknown,3,0,25,36,0,8,46,29,82,0,45.0,49.0
+B. TERRA-CARRIOLA LAT 3.mp4,40.0,33.0,60.0,173,unknown,False,False,31.0,M,unknown,3,0,25,36,0,8,46,29,82,0,45.0,49.0
+B. TERRA-CARRIOLA LAT 4.mp4,40.0,33.0,60.0,173,unknown,False,False,31.0,M,unknown,3,0,25,36,0,8,46,29,82,0,45.0,49.0
+B. CARRIOLA-TERRA LAT 1.mp4,40.0,33.0,60.0,173,unknown,False,False,31.0,M,unknown,1,46,29,82,0,7,0,25,36,0,49.0,45.0
+B. CARRIOLA-TERRA LAT 2.mp4,40.0,33.0,60.0,173,unknown,False,False,31.0,M,unknown,2,46,29,82,0,6,0,25,36,0,49.0,45.0
+B. CARRIOLA-TERRA LAT 3.mp4,40.0,33.0,60.0,173,unknown,False,False,31.0,M,unknown,2,46,29,82,0,6,0,25,36,0,49.0,45.0
+B. CARRIOLA-TERRA LAT 4.mp4,40.0,33.0,60.0,173,unknown,False,False,31.0,M,unknown,3,46,29,82,0,8,0,25,36,0,49.0,45.0
+B. CARRIOLA-TERRA LAT 5.mp4,40.0,33.0,60.0,173,unknown,False,False,31.0,M,unknown,2,46,29,82,0,6,0,25,36,0,49.0,45.0
+B. CARRIOLA-TERRA LAT 6.mp4,40.0,33.0,60.0,173,unknown,False,False,31.0,M,unknown,2,46,29,82,0,6,0,25,36,0,49.0,45.0
+B. TERRA-CARRIOLA 3quarti 1.mp4,40.0,33.0,60.0,173,unknown,False,False,31.0,M,unknown,2,0,25,36,0,7,46,29,82,0,45.0,49.0
+B. TERRA-CARRIOLA 3quarti 2.mp4,40.0,33.0,60.0,173,unknown,False,False,31.0,M,unknown,3,0,25,36,0,8,46,29,82,0,45.0,49.0
+B. CARRIOLA-TERRA 3quarti 1.mp4,40.0,33.0,60.0,173,unknown,False,False,31.0,M,unknown,3,46,29,82,0,8,0,25,36,0,49.0,45.0
+B. CARRIOLA-TERRA 3quarti 2.mp4,40.0,33.0,60.0,173,unknown,False,False,31.0,M,unknown,2,46,29,82,0,7,0,25,36,0,49.0,45.0
+C. TERRA-CARRIOLA LAT 1.mp4,40.0,33.0,60.0,185,unknown,False,False,24.0,M,unknown,2,0,36,36,0,5,46,35,82,0,56.0,55.0
+C. TERRA-CARRIOLA LAT 2.mp4,40.0,33.0,60.0,185,unknown,False,False,24.0,M,unknown,2,0,36,36,0,5,46,35,82,0,56.0,55.0
+C. TERRA-CARRIOLA LAT 3.mp4,40.0,33.0,60.0,185,unknown,False,False,24.0,M,unknown,2,0,36,36,0,5,46,35,82,0,56.0,55.0
+C. TERRA-CARRIOLA LAT 4.mp4,40.0,33.0,60.0,185,unknown,False,False,24.0,M,unknown,2,0,36,36,0,5,46,35,82,0,56.0,55.0
+C. CARRIOLA-TERRA LAT 1.mp4,40.0,33.0,60.0,185,unknown,False,False,24.0,M,unknown,3,46,35,82,0,6,0,36,36,0,55.0,56.0
+C. CARRIOLA-TERRA LAT 2.mp4,40.0,33.0,60.0,185,unknown,False,False,24.0,M,unknown,2,46,35,82,0,5,0,36,36,0,55.0,56.0
+C. CARRIOLA-TERRA LAT 3.mp4,40.0,33.0,60.0,185,unknown,False,False,24.0,M,unknown,2,46,35,82,0,5,0,36,36,0,55.0,56.0
+C. CARRIOLA-TERRA LAT 4.mp4,40.0,33.0,60.0,185,unknown,False,False,24.0,M,unknown,2,46,35,82,0,4,0,36,36,0,55.0,56.0
+C. TERRA-CARRIOLA 3quarti 1.mp4,40.0,33.0,60.0,185,unknown,False,False,24.0,M,unknown,2,0,36,36,0,6,46,35,82,0,56.0,55.0
+C. TERRA-CARRIOLA 3quarti 2.mp4,40.0,33.0,60.0,185,unknown,False,False,24.0,M,unknown,2,0,36,36,0,5,46,35,82,0,56.0,55.0
+C. CARRIOLA-TERRA 3quarti 1.mp4,40.0,33.0,60.0,185,unknown,False,False,24.0,M,unknown,3,46,35,82,0,6,0,36,36,0,55.0,56.0
+C. CARRIOLA-TERRA 3quarti 2.mp4,40.0,33.0,60.0,185,unknown,False,False,24.0,M,unknown,2,46,35,82,0,4,0,36,36,0,55.0,56.0
+C. CARRIOLA-TERRA 3quarti 3.mp4,40.0,33.0,60.0,185,unknown,False,False,24.0,M,unknown,2,46,35,82,0,5,0,36,36,0,55.0,56.0
+D. TERRA-CARRIOLA LAT 1.mp4,40.0,33.0,60.0,165,unknown,False,False,30.0,M,unknown,2,0,28,36,0,5,46,38,82,0,48.0,58.0
+D. TERRA-CARRIOLA LAT 2.mp4,40.0,33.0,60.0,165,unknown,False,False,30.0,M,unknown,3,0,28,36,0,6,46,38,82,0,48.0,58.0
+D. TERRA-CARRIOLA LAT 3.mp4,40.0,33.0,60.0,165,unknown,False,False,30.0,M,unknown,2,0,28,36,0,5,46,38,82,0,48.0,58.0
+D. CARRIOLA-TERRA LAT 1.mp4,40.0,33.0,60.0,165,unknown,False,False,30.0,M,unknown,1,46,38,82,0,5,0,28,36,0,58.0,48.0
+D. CARRIOLA-TERRA LAT 2.mp4,40.0,33.0,60.0,165,unknown,False,False,30.0,M,unknown,1,46,38,82,0,4,0,28,36,0,58.0,48.0
+D. CARRIOLA-TERRA LAT 3.mp4,40.0,33.0,60.0,165,unknown,False,False,30.0,M,unknown,2,46,38,82,0,5,0,28,36,0,58.0,48.0
+D. TERRA-CARRIOLA 3quarti 1.mp4,40.0,33.0,60.0,165,unknown,False,False,30.0,M,unknown,2,0,28,36,0,6,46,38,82,0,48.0,58.0
+D. TERRA-CARRIOLA 3quarti 2.mp4,40.0,33.0,60.0,165,unknown,False,False,30.0,M,unknown,1,0,28,36,0,4,46,38,82,0,48.0,58.0
+D. TERRA-CARRIOLA 3quarti 3.mp4,40.0,33.0,60.0,165,unknown,False,False,30.0,M,unknown,2,0,28,36,0,6,46,38,82,0,48.0,58.0
+D. CARRIOLA-TERRA 3quarti 1.mp4,40.0,33.0,60.0,165,unknown,False,False,30.0,M,unknown,2,46,38,82,0,5,0,28,36,0,58.0,48.0
+D. CARRIOLA-TERRA 3quarti 2.mp4,40.0,33.0,60.0,165,unknown,False,False,30.0,M,unknown,2,46,38,82,0,5,0,28,36,0,58.0,48.0
+D. CARRIOLA-TERRA 3quarti 3.mp4,40.0,33.0,60.0,165,unknown,False,False,30.0,M,unknown,2,46,38,82,0,5,0,28,36,0,58.0,48.0

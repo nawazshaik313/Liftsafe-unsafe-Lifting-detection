@@ -1,0 +1,44 @@
+{
+  "task": "INAIL LI condition classification",
+  "classes": {
+    "1": "LI 1",
+    "2": "LI 2",
+    "3": "LI 3"
+  },
+  "input_shape_per_trial": [
+    64,
+    4
+  ],
+  "input_features": [
+    "trunk_inclination",
+    "supplementary_hip",
+    "knee_flexion",
+    "trunk_angular_change"
+  ],
+  "statistics_per_feature": [
+    "mean",
+    "std",
+    "min",
+    "max"
+  ],
+  "summary_feature_count": 16,
+  "training_subjects": [
+    "S01",
+    "S02",
+    "S03",
+    "S04",
+    "S05",
+    "S06",
+    "S07",
+    "S08",
+    "S09",
+    "S10"
+  ],
+  "training_trials": 90,
+  "cross_validation": {
+    "method": "5-fold GroupKFold by subject",
+    "out_of_fold_accuracy": 0.7667,
+    "note": "Exploratory estimate; small dataset, not safe/unsafe validation."
+  },
+  "warning": "Predicts experimental LI condition, not a validated safe/unsafe label. This final artifact was fitted on all 90 eligible trials; do not use its training accuracy as independent test performance."
+}

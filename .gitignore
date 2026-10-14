@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.DS_Store
+
+# Large source datasets
+data/external/
+data/raw/
+data/frames/
+
+# Generated videos and temporary output
+outputs/*.mp4
+outputs/pose_video/
+outputs/pose_sample.jpg
+
+# Keep required model artifacts and evaluation reports
+!outputs/inail_cnn/
+
+# Local backups and development-agent configuration
+*.backup
+.agents/
+.claude/

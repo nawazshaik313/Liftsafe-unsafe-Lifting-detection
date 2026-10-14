@@ -1,0 +1,45 @@
+{
+  "task": "INAIL LI condition classification",
+  "classes": {
+    "1": "LI 1",
+    "2": "LI 2",
+    "3": "LI 3"
+  },
+  "input_shape_per_trial": [
+    64,
+    4
+  ],
+  "summary_feature_count": 16,
+  "feature_statistics_order": [
+    "all feature means",
+    "all feature standard deviations",
+    "all feature minima",
+    "all feature maxima"
+  ],
+  "training_subjects": [
+    "S01",
+    "S02",
+    "S03",
+    "S04",
+    "S05",
+    "S06",
+    "S07",
+    "S08",
+    "S09",
+    "S10"
+  ],
+  "training_trials": 90,
+  "model": {
+    "type": "RandomForestClassifier",
+    "n_estimators": 300,
+    "min_samples_leaf": 2,
+    "random_state": 42
+  },
+  "cross_validation": {
+    "method": "5-fold GroupKFold by subject",
+    "out_of_fold_accuracy": 0.8,
+    "macro_f1": 0.798,
+    "note": "Exploratory estimate from 90 trials and 10 subjects; not safe/unsafe validation."
+  },
+  "warning": "Predicts experimental LI condition, not a validated safe/unsafe label. The final artifact is fitted on all 90 eligible trials. Its training accuracy is not independent test performance."
+}

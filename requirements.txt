@@ -10,3 +10,5 @@ matplotlib
 scipy
 torch
 av
+libgl1
+libglib2.0-0

@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from src.pose_estimation import (
+    PoseTargetTracker,
     analyze_pose_frame,
     create_pose_estimator,
     draw_pose_landmarks,
@@ -300,7 +301,7 @@ def _source_path(source, temp_dir: Path) -> Path:
     return path
 
 
-def process_video(uploaded_file, progress_bar, status, threshold=45):
+def process_video(uploaded_file, progress_bar, status, threshold=45, target_region="auto"):
     """Decode a video sequentially, analyze frames, and return an H.264 MP4."""
     with tempfile.TemporaryDirectory(prefix="liftsafe_") as temp_name:
         temp_dir = Path(temp_name)
@@ -310,6 +311,7 @@ def process_video(uploaded_file, progress_bar, status, threshold=45):
 
         rows = []
         frame_index = 0
+        target_tracker = PoseTargetTracker(preferred_region=target_region)
         writer = None
         pose = None
         started = time.monotonic()
@@ -353,7 +355,7 @@ def process_video(uploaded_file, progress_bar, status, threshold=45):
                                     f"{type(exc).__name__}: {exc}",
                                 ) from exc
                         try:
-                            pose_result = analyze_pose_frame(pose, frame)
+                            pose_result = analyze_pose_frame(pose, frame, target_tracker)
                         except Exception as exc:
                             logger.exception("Pose inference failed on decoded video frame %s", frame_index)
                             raise VideoProcessingError(
@@ -369,6 +371,10 @@ def process_video(uploaded_file, progress_bar, status, threshold=45):
                             "frame": frame_index,
                             "time_seconds": frame_index / fps,
                             "pose_detected": pose_result.pose_detected,
+                            "target_state": pose_result.state,
+                            "target_id": pose_result.target_id,
+                            "target_score": pose_result.target_score,
+                            "people_detected": pose_result.person_count,
                             "landmark_confidence": (
                                 pose_result.visibility
                                 if pose_result.visibility is not None else np.nan
@@ -470,6 +476,11 @@ def process_video(uploaded_file, progress_bar, status, threshold=45):
             if pose_count == 0:
                 status.caption(
                     f"Processed {frame_index} frames; no usable person landmarks were detected."
+                )
+            elif int(pd.DataFrame(rows)["people_detected"].max()) > 1:
+                status.caption(
+                    f"Tracked a likely lifting person across {frame_index} frames; "
+                    "ambiguous and lost-target frames have no measurements."
                 )
             return compatible_path.read_bytes(), pd.DataFrame(rows), fps
         finally:

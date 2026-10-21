@@ -71,6 +71,22 @@ with st.container(border=True):
 if uploaded_video is not None:
 
     st.caption(f"Selected file: {uploaded_video.name}")
+    with st.expander("Preview video and choose the lifter's starting position"):
+        st.video(uploaded_video)
+        target_region = st.selectbox(
+            "Target person's starting position in the frame",
+            options=["auto", "left", "center", "right"],
+            format_func=lambda value: {
+                "auto": "Automatic selection (recommended)",
+                "left": "Left third",
+                "center": "Center third",
+                "right": "Right third",
+            }[value],
+            help=(
+                "If automatic selection is ambiguous, choose the lifter's initial "
+                "frame position. Tracking then follows that person across the clip."
+            ),
+        )
 
 
     if st.button("Analyze video", type="primary"):
@@ -92,7 +108,7 @@ if uploaded_video is not None:
             with st.spinner("Estimating pose landmarks..."):
 
                 video_bytes, data, fps = process_video(
-                    uploaded_video, progress, status, threshold
+                    uploaded_video, progress, status, threshold, target_region
                 )
 
             st.session_state["liftsafe_video_bytes"] = video_bytes
@@ -101,11 +117,36 @@ if uploaded_video is not None:
 
             st.session_state["liftsafe_video_fps"] = fps
 
+            ambiguous_frames = int(
+                data.get("target_state", pd.Series(dtype=str)).eq("target_ambiguous").sum()
+            )
+            lost_frames = int(
+                data.get("target_state", pd.Series(dtype=str)).eq("target_lost").sum()
+            )
             if data["trunk_inclination_2d_deg"].notna().any():
                 st.success("Video frames decoded and pose measurements are available.")
+                if ambiguous_frames:
+                    st.warning(
+                        f"Target selection was ambiguous in {ambiguous_frames} frame(s). "
+                        "Those frames have no measurements. Choose the lifter's starting position and analyze again if needed."
+                    )
+                if lost_frames:
+                    st.warning(
+                        f"The tracked lifter was temporarily lost in {lost_frames} frame(s); "
+                        "measurements were paused without switching to another person."
+                    )
             elif bool(data["pose_detected"].any()):
                 st.warning(
                     "Pose measurements unavailable — improve lighting, camera angle, or body visibility."
+                )
+            elif bool(data.get("target_state", pd.Series(dtype=str)).eq("target_ambiguous").any()):
+                st.warning(
+                    "Several people were detected, but the lifting target was ambiguous. "
+                    "Choose the lifter's starting position above and analyze again."
+                )
+            elif bool(data.get("target_state", pd.Series(dtype=str)).eq("target_lost").any()):
+                st.warning(
+                    "The tracked person could not be reacquired. Measurements were paused rather than transferred to a bystander."
                 )
             else:
                 st.warning(

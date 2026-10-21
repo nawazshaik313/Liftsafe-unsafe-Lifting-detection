@@ -11,6 +11,7 @@ import streamlit as st
 from streamlit_webrtc import VideoProcessorBase, WebRtcMode, webrtc_streamer
 
 from src.pose_estimation import (
+    PoseTargetTracker,
     analyze_pose_frame,
     create_pose_estimator,
     draw_pose_landmarks,
@@ -31,10 +32,11 @@ inject_app_styles()
 class LiftSafeProcessor(VideoProcessorBase):
     """Processes browser camera frames in the WebRTC worker."""
 
-    def __init__(self, threshold):
+    def __init__(self, threshold, target_region="auto"):
         self.threshold = threshold
         self.lock = Lock()
         self.history = []
+        self.target_tracker = PoseTargetTracker(preferred_region=target_region)
         self._closed = False
         self.latest = {
             "state": "starting",
@@ -66,7 +68,7 @@ class LiftSafeProcessor(VideoProcessorBase):
 
             if self.pose is None:
                 raise RuntimeError("MediaPipe Pose could not be initialized.")
-            pose_result = analyze_pose_frame(self.pose, image)
+            pose_result = analyze_pose_frame(self.pose, image, self.target_tracker)
             measurements = pose_result.measurements
             trunk = measurements.get("Trunk inclination (°)")
             review = None if trunk is None else trunk >= self.threshold
@@ -78,10 +80,17 @@ class LiftSafeProcessor(VideoProcessorBase):
                 "measurements": dict(measurements),
                 "review": review,
                 "error": None,
+                "person_count": pose_result.person_count,
+                "target_id": pose_result.target_id,
+                "target_score": pose_result.target_score,
             }
             if pose_result.landmarks is not None:
                 draw_pose_landmarks(image, pose_result.landmarks.landmark)
-            if not pose_result.pose_detected:
+            if pose_result.state == "target_ambiguous":
+                label, color = "TARGET AMBIGUOUS - FRAME ONE PERSON", (0, 165, 255)
+            elif pose_result.state == "target_lost":
+                label, color = "TRACKED PERSON TEMPORARILY LOST", (0, 165, 255)
+            elif not pose_result.pose_detected:
                 label, color = "NO PERSON DETECTED", (0, 165, 255)
             elif trunk is None:
                 label, color = "POSE DETECTED - VISIBILITY INSUFFICIENT", (0, 165, 255)
@@ -175,6 +184,18 @@ threshold = st.slider(
     min_value=10, max_value=80, value=45, step=5,
 )
 
+target_region = st.selectbox(
+    "Target person's starting position",
+    options=["auto", "left", "center", "right"],
+    format_func=lambda value: {
+        "auto": "Automatic selection (recommended)",
+        "left": "Left third",
+        "center": "Center third",
+        "right": "Right third",
+    }[value],
+    help="Choose the lifter's initial position when multiple people appear in view.",
+)
+
 st.caption(
     "The threshold is experimental and is not a validated "
     "safety limit."
@@ -183,7 +204,7 @@ st.caption(
 ctx = webrtc_streamer(
     key="liftsafe-browser-camera",
     mode=WebRtcMode.SENDRECV,
-    video_processor_factory=lambda: LiftSafeProcessor(threshold),
+    video_processor_factory=lambda: LiftSafeProcessor(threshold, target_region),
     media_stream_constraints={
         "video": {
             "width": {"ideal": 960},
@@ -245,6 +266,15 @@ def render_measurement_history():
                 st.warning(
                     "No person detected — move into the camera frame and ensure your full upper body is visible."
                 )
+            elif state == "target_ambiguous":
+                st.warning(
+                    "Several people are visible and the lifting target is ambiguous. "
+                    "Frame the lifter clearly or move others out of view; measurements are paused."
+                )
+            elif state == "target_lost":
+                st.warning(
+                    "The tracked person is temporarily lost. Keep them visible; measurements are paused instead of switching to another person."
+                )
             elif state == "incomplete_landmarks":
                 st.warning(
                     "Pose measurements unavailable — improve lighting, camera angle, or body visibility."
@@ -283,6 +313,12 @@ def render_measurement_history():
                 visibility = latest.get("visibility")
                 if visibility is not None:
                     st.caption(f"Keypoint visibility/tracking quality: {visibility:.0%}")
+                if latest.get("person_count", 0) > 1:
+                    st.caption(
+                        f"Tracking person {latest.get('target_id')} among "
+                        f"{latest['person_count']} detected people; heuristic selection "
+                        f"score {latest.get('target_score') or 0:.2f}."
+                    )
                 st.caption(
                     f"Experimental threshold: {threshold}°. This image-space review is not a validated ergonomic assessment."
                 )

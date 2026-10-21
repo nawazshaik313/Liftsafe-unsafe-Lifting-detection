@@ -14,6 +14,7 @@ from src.pose_estimation import (
     PoseTargetTracker,
     analyze_pose_frame,
     create_pose_estimator,
+    draw_candidate_boxes,
     draw_pose_landmarks,
 )
 from src.ui import inject_app_styles, render_sidebar_brand, render_theme_toggle
@@ -37,6 +38,7 @@ class LiftSafeProcessor(VideoProcessorBase):
         self.lock = Lock()
         self.history = []
         self.target_tracker = PoseTargetTracker(preferred_region=target_region)
+        self.target_lock = Lock()
         self._closed = False
         self.latest = {
             "state": "starting",
@@ -68,7 +70,8 @@ class LiftSafeProcessor(VideoProcessorBase):
 
             if self.pose is None:
                 raise RuntimeError("MediaPipe Pose could not be initialized.")
-            pose_result = analyze_pose_frame(self.pose, image, self.target_tracker)
+            with self.target_lock:
+                pose_result = analyze_pose_frame(self.pose, image, self.target_tracker)
             measurements = pose_result.measurements
             trunk = measurements.get("Trunk inclination (°)")
             review = None if trunk is None else trunk >= self.threshold
@@ -83,9 +86,20 @@ class LiftSafeProcessor(VideoProcessorBase):
                 "person_count": pose_result.person_count,
                 "target_id": pose_result.target_id,
                 "target_score": pose_result.target_score,
+                "candidate_number": pose_result.candidate_number,
+                "selection_reason": pose_result.selection_reason,
+                "candidates": pose_result.candidates,
             }
+            if pose_result.candidates:
+                draw_candidate_boxes(image, pose_result.candidates, pose_result.candidate_number)
             if pose_result.landmarks is not None:
                 draw_pose_landmarks(image, pose_result.landmarks.landmark)
+            logger.debug(
+                "live frame candidates=%s selected_track=%s candidate=%s bbox=%s reason=%s crop_used=false overlay_same_pose=%s",
+                pose_result.candidates, pose_result.target_id,
+                pose_result.candidate_number, pose_result.target_bbox,
+                pose_result.selection_reason, pose_result.landmarks is not None,
+            )
             if pose_result.state == "target_ambiguous":
                 label, color = "TARGET AMBIGUOUS - FRAME ONE PERSON", (0, 165, 255)
             elif pose_result.state == "target_lost":
@@ -154,6 +168,14 @@ class LiftSafeProcessor(VideoProcessorBase):
     def get_latest(self):
         with self.lock:
             return dict(self.latest)
+
+    def lock_candidate(self, candidate_number):
+        with self.target_lock:
+            self.target_tracker.request_manual_candidate(candidate_number)
+
+    def reset_target(self):
+        with self.target_lock:
+            self.target_tracker.reset()
 
     def close(self):
         if not self._closed and self.pose is not None:
@@ -315,15 +337,31 @@ def render_measurement_history():
                     st.caption(f"Keypoint visibility/tracking quality: {visibility:.0%}")
                 if latest.get("person_count", 0) > 1:
                     st.caption(
-                        f"Tracking person {latest.get('target_id')} among "
-                        f"{latest['person_count']} detected people; heuristic selection "
-                        f"score {latest.get('target_score') or 0:.2f}."
+                        f"Tracked person ID {latest.get('target_id')} via candidate "
+                        f"P{latest.get('candidate_number')}; selection score "
+                        f"{latest.get('target_score') or 0:.2f}. "
+                        f"{latest.get('selection_reason')}"
                     )
                 st.caption(
                     f"Experimental threshold: {threshold}°. This image-space review is not a validated ergonomic assessment."
                 )
             if latest.get("timestamp"):
                 st.caption(f"Latest frame: {latest['timestamp']} UTC")
+            candidates = latest.get("candidates", ())
+            if candidates:
+                st.caption(
+                    "Camera candidates are numbered left-to-right. Lock the lifter if "
+                    "automatic tracking chose a different person."
+                )
+                candidate_columns = st.columns(min(len(candidates), 4))
+                for column, candidate in zip(candidate_columns, candidates):
+                    number = candidate["candidate_number"]
+                    if column.button(
+                        f"Lock Person {number}", key=f"lock_live_candidate_{number}"
+                    ):
+                        processor.lock_candidate(number)
+            if st.button("Reset target lock", key="reset_live_target"):
+                processor.reset_target()
 
     history = st.session_state.live_camera_history
     if history:

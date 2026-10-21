@@ -19,6 +19,8 @@ from src.pose_estimation import (
     PoseTargetTracker,
     analyze_pose_frame,
     create_pose_estimator,
+    detect_pose_candidates,
+    draw_candidate_boxes,
     draw_pose_landmarks,
 )
 
@@ -301,7 +303,65 @@ def _source_path(source, temp_dir: Path) -> Path:
     return path
 
 
-def process_video(uploaded_file, progress_bar, status, threshold=45, target_region="auto"):
+def inspect_video_first_frame(uploaded_file):
+    """Return a numbered, all-candidate preview for explicit target selection."""
+    with tempfile.TemporaryDirectory(prefix="liftsafe_preview_") as temp_name:
+        source = _source_path(uploaded_file, Path(temp_name))
+        try:
+            with SequentialVideoReader(source) as reader:
+                first_frame = next(iter(reader), None)
+        except VideoProcessingError:
+            raise
+        if first_frame is None:
+            raise VideoProcessingError(
+                "decode_zero_frames", "No video frame was available for target selection."
+            )
+
+        pose = None
+        try:
+            pose = create_pose_estimator(static_image_mode=True)
+            candidates = detect_pose_candidates(pose, first_frame)
+        except Exception as exc:
+            raise VideoProcessingError(
+                "pose_initialization",
+                "People could not be detected in the preview frame on this server.",
+                f"{type(exc).__name__}: {exc}",
+            ) from exc
+        finally:
+            if pose is not None:
+                pose.close()
+
+        ok, encoded = cv2.imencode(".jpg", first_frame)
+        if not ok:
+            raise VideoProcessingError(
+                "preview_encode", "The first video frame could not be displayed."
+            )
+        regions = [
+            {
+                "candidate_number": item["candidate_number"],
+                "bbox": list(item["bbox"]),
+                "center": list(item["center"]),
+                "visibility": item["visibility"],
+            }
+            for item in candidates
+        ]
+        return encoded.tobytes(), regions
+
+
+def render_target_selection_preview(frame_jpeg, candidates, selected_candidate=None):
+    """Draw candidate boxes and highlight the user's chosen person."""
+    image = cv2.imdecode(np.frombuffer(frame_jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)
+    if image is None:
+        return frame_jpeg
+    draw_candidate_boxes(image, candidates, selected_candidate)
+    ok, encoded = cv2.imencode(".jpg", image)
+    return encoded.tobytes() if ok else frame_jpeg
+
+
+def process_video(
+    uploaded_file, progress_bar, status, threshold=45, target_region="auto",
+    manual_target_center=None,
+):
     """Decode a video sequentially, analyze frames, and return an H.264 MP4."""
     with tempfile.TemporaryDirectory(prefix="liftsafe_") as temp_name:
         temp_dir = Path(temp_name)
@@ -311,7 +371,10 @@ def process_video(uploaded_file, progress_bar, status, threshold=45, target_regi
 
         rows = []
         frame_index = 0
-        target_tracker = PoseTargetTracker(preferred_region=target_region)
+        target_tracker = PoseTargetTracker(
+            preferred_region=target_region,
+            manual_target_center=manual_target_center,
+        )
         writer = None
         pose = None
         started = time.monotonic()
@@ -375,6 +438,20 @@ def process_video(uploaded_file, progress_bar, status, threshold=45, target_regi
                             "target_id": pose_result.target_id,
                             "target_score": pose_result.target_score,
                             "people_detected": pose_result.person_count,
+                            "candidate_number": pose_result.candidate_number,
+                            "selection_reason": pose_result.selection_reason,
+                            "candidate_diagnostics": json.dumps([
+                                {
+                                    **candidate,
+                                    "bbox": list(candidate["bbox"]),
+                                    "center": list(candidate["center"]),
+                                }
+                                for candidate in pose_result.candidates
+                            ]),
+                            "pose_crop_used": False,
+                            "overlay_matches_selected_pose": bool(
+                                pose_result.landmarks is not None
+                            ),
                             "landmark_confidence": (
                                 pose_result.visibility
                                 if pose_result.visibility is not None else np.nan
@@ -396,8 +473,20 @@ def process_video(uploaded_file, progress_bar, status, threshold=45, target_regi
                                 "Right knee angle (°)", np.nan
                             ),
                         }
+                        if pose_result.candidates:
+                            draw_candidate_boxes(
+                                frame, pose_result.candidates,
+                                pose_result.candidate_number,
+                            )
                         if pose_result.landmarks is not None:
                             draw_pose_landmarks(frame, pose_result.landmarks.landmark)
+                        logger.debug(
+                            "video frame=%s candidates=%s selected_track=%s selected_candidate=%s reason=%s crop_used=false overlay_same_pose=%s",
+                            frame_index, row["candidate_diagnostics"],
+                            pose_result.target_id, pose_result.candidate_number,
+                            pose_result.selection_reason,
+                            row["overlay_matches_selected_pose"],
+                        )
                         if review:
                             cv2.rectangle(frame, (0, 0), (width, 72), (0, 140, 255), -1)
                             cv2.putText(

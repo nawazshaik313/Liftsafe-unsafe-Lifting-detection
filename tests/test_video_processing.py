@@ -201,6 +201,43 @@ class VideoProcessingTests(unittest.TestCase):
                     self.assertEqual(reader.decoder, "ffmpeg")
         self.assertEqual(len(frames), 2)
 
+    def test_first_frame_target_preview_returns_numbered_boxes_and_manual_highlight(self):
+        payload = self._short_video(frame_count=1)
+        upload = io.BytesIO(payload)
+        upload.name = "preview.mp4"
+        candidates = (
+            {
+                "candidate_number": 1,
+                "bbox": (0.1, 0.1, 0.35, 0.9),
+                "center": (0.225, 0.5),
+                "visibility": 0.8,
+                "landmarks": [],
+            },
+            {
+                "candidate_number": 2,
+                "bbox": (0.6, 0.1, 0.9, 0.9),
+                "center": (0.75, 0.5),
+                "visibility": 0.9,
+                "landmarks": [],
+            },
+        )
+        with (
+            patch.object(video_processing, "create_pose_estimator", return_value=FakePose()),
+            patch.object(video_processing, "detect_pose_candidates", return_value=candidates),
+        ):
+            frame_jpeg, regions = video_processing.inspect_video_first_frame(upload)
+
+        self.assertEqual([item["candidate_number"] for item in regions], [1, 2])
+        self.assertEqual(regions[1]["center"], [0.75, 0.5])
+        highlighted = video_processing.render_target_selection_preview(frame_jpeg, regions, 2)
+        image = cv2.imdecode(np.frombuffer(highlighted, dtype=np.uint8), cv2.IMREAD_COLOR)
+        selected_green = (
+            (image[:, :, 1] > 130)
+            & (image[:, :, 1] > image[:, :, 2] * 1.5)
+            & (image[:, :, 1] > image[:, :, 0] * 1.5)
+        )
+        self.assertTrue(np.any(selected_green))
+
     @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg is not installed")
     def test_pose_failure_is_not_mislabeled_as_decode_failure(self):
         payload = self._short_video(frame_count=1)

@@ -39,6 +39,10 @@ class PoseFrame:
     person_count: int = 0
     target_id: int | None = None
     target_score: float | None = None
+    candidate_number: int | None = None
+    target_bbox: tuple[float, float, float, float] | None = None
+    selection_reason: str | None = None
+    candidates: tuple[dict, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -48,6 +52,10 @@ class TargetSelection:
     target_id: int | None
     confidence: float | None
     person_count: int
+    candidate_number: int | None = None
+    bbox: tuple[float, float, float, float] | None = None
+    reason: str = ""
+    candidates: tuple[dict, ...] = ()
 
 
 def _candidate_features(landmarks, width, height):
@@ -104,10 +112,16 @@ def _box_iou(a, b):
 class PoseTargetTracker:
     """Select and follow a likely lifting person without switching on a missed frame."""
 
-    def __init__(self, *, max_misses=8, ambiguity_margin=0.08, preferred_region="auto"):
+    def __init__(
+        self, *, max_misses=8, ambiguity_margin=0.08, preferred_region="auto",
+        manual_target_center=None,
+    ):
         self.max_misses = max_misses
         self.ambiguity_margin = ambiguity_margin
         self.preferred_region = preferred_region
+        self.manual_target_center = manual_target_center
+        self._manual_request = None
+        self._manual_initial_applied = False
         self._box = None
         self._trunk = None
         self._target_id = None
@@ -118,19 +132,29 @@ class PoseTargetTracker:
         self._box = self._trunk = self._target_id = None
         self._next_id = 1
         self._misses = 0
+        self._manual_request = None
+
+    def request_manual_candidate(self, candidate_number):
+        """Lock the next detected frame to a left-to-right numbered candidate."""
+        self._manual_request = candidate_number
 
     def select(self, candidates, width, height):
         features = [f for pose in candidates if (f := _candidate_features(pose, width, height))]
+        features.sort(key=lambda feature: feature["center"][0])
+        for candidate_number, feature in enumerate(features, start=1):
+            feature["candidate_number"] = candidate_number
         count = len(features)
         if not count:
             if self._target_id is not None:
                 self._misses += 1
                 if self._misses <= self.max_misses:
-                    return TargetSelection(None, "target_lost", self._target_id, None, 0)
+                    return TargetSelection(None, "target_lost", self._target_id, None, 0,
+                                           reason="Selected target not detected; holding track.")
                 next_id = self._next_id
                 self.reset()
                 self._next_id = next_id
-            return TargetSelection(None, "no_person", None, None, 0)
+            return TargetSelection(None, "no_person", None, None, 0,
+                                   reason="No valid multi-pose candidates detected.")
 
         largest_area = max(f["area"] for f in features) or 1.0
         for feature in features:
@@ -151,6 +175,38 @@ class PoseTargetTracker:
                 + 0.10 * self._region_score(feature["center"][0])
             )
 
+        summaries = tuple({
+            "candidate_number": f["candidate_number"],
+            "bbox": f["box"],
+        "center": f["center"],
+            "visibility": f["visibility"],
+            "score": f["score"],
+        } for f in features)
+
+        requested = self._manual_request
+        if requested is None and not self._manual_initial_applied and self.manual_target_center is not None:
+            requested = min(
+                features,
+                key=lambda f: math.dist(f["center"], self.manual_target_center),
+            )["candidate_number"]
+            self._manual_initial_applied = True
+        if requested is not None:
+            self._manual_request = None
+            chosen = next((f for f in features if f["candidate_number"] == requested), None)
+            if chosen is None:
+                self._manual_request = requested
+                return TargetSelection(None, "target_ambiguous", self._target_id, None,
+                                       count, reason="The selected candidate is no longer present.",
+                                       candidates=summaries)
+            self._target_id = self._next_id
+            self._next_id += 1
+            self._box, self._trunk, self._misses = chosen["box"], chosen["trunk"], 0
+            return TargetSelection(chosen["landmarks"], "selected", self._target_id,
+                                   float(chosen["score"]), count,
+                                   candidate_number=chosen["candidate_number"],
+                                   bbox=chosen["box"], reason="User-selected candidate lock.",
+                                   candidates=summaries)
+
         # If a target was previously selected, continuity wins over a stronger
         # one-frame score from a bystander. Do not substitute another person
         # during short occlusions or detector dropouts.
@@ -167,10 +223,15 @@ class PoseTargetTracker:
                 self._box = chosen["box"]
                 self._trunk = chosen["trunk"]
                 return TargetSelection(chosen["landmarks"], "selected", self._target_id,
-                                       float(0.5 * continuity + 0.5 * chosen["score"]), count)
+                                       float(0.5 * continuity + 0.5 * chosen["score"]), count,
+                                       candidate_number=chosen["candidate_number"],
+                                       bbox=chosen["box"], reason="Matched prior target by box overlap and center continuity.",
+                                       candidates=summaries)
             self._misses += 1
             if self._misses <= self.max_misses:
-                return TargetSelection(None, "target_lost", self._target_id, None, count)
+                return TargetSelection(None, "target_lost", self._target_id, None, count,
+                                       reason="No candidate matched the tracked person's box; refusing to switch.",
+                                       candidates=summaries)
             next_id = self._next_id
             self.reset()
             self._next_id = next_id
@@ -186,14 +247,21 @@ class PoseTargetTracker:
         ranked = sorted(features, key=lambda f: f["score"], reverse=True)
         gap = ranked[0]["score"] - ranked[1]["score"] if len(ranked) > 1 else 1.0
         if ranked[0]["score"] < 0.38 or (len(ranked) > 1 and gap < self.ambiguity_margin):
-            return TargetSelection(None, "target_ambiguous", None, float(ranked[0]["score"]), count)
+            return TargetSelection(None, "target_ambiguous", None, float(ranked[0]["score"]), count,
+                                   candidate_number=ranked[0]["candidate_number"],
+                                   bbox=ranked[0]["box"],
+                                   reason="Top candidate scores are too close; manual selection required.",
+                                   candidates=summaries)
 
         chosen = ranked[0]
         self._target_id = self._next_id
         self._next_id += 1
         self._box, self._trunk, self._misses = chosen["box"], chosen["trunk"], 0
         return TargetSelection(chosen["landmarks"], "selected", self._target_id,
-                               float(chosen["score"]), count)
+                               float(chosen["score"]), count,
+                               candidate_number=chosen["candidate_number"],
+                               bbox=chosen["box"], reason="Highest combined posture, visibility, size, and position score.",
+                               candidates=summaries)
 
     def _region_score(self, center_x):
         if self.preferred_region == "left":
@@ -283,7 +351,9 @@ def analyze_pose_frame(pose, bgr_frame, tracker: PoseTargetTracker | None = None
     target = tracker.select(candidates, width, height)
     if target.landmarks is None:
         return PoseFrame(None, False, target.state, None, {}, target.person_count,
-                         target.target_id, target.confidence)
+                         target.target_id, target.confidence,
+                         target.candidate_number, target.bbox, target.reason,
+                         target.candidates)
 
     landmarks = target.landmarks
     visibility = calculate_landmark_confidence(landmarks, POSE_LANDMARK_INDICES)
@@ -297,7 +367,48 @@ def analyze_pose_frame(pose, bgr_frame, tracker: PoseTargetTracker | None = None
     )
     return PoseFrame(SimpleNamespace(landmark=landmarks), True, state, visibility,
                      measurements, target.person_count, target.target_id,
-                     target.confidence)
+                     target.confidence, target.candidate_number, target.bbox,
+                     target.reason, target.candidates)
+
+
+def detect_pose_candidates(pose, bgr_frame):
+    """Return visible multi-pose candidate boxes, numbered left-to-right."""
+    if (bgr_frame is None or getattr(bgr_frame, "ndim", 0) != 3
+            or bgr_frame.shape[2] != 3 or bgr_frame.size == 0):
+        raise ValueError("Expected a non-empty BGR image with three color channels.")
+    height, width = bgr_frame.shape[:2]
+    results = pose.process(cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB))
+    raw = getattr(results, "pose_landmarks", None)
+    if not raw:
+        return ()
+    poses = [raw.landmark] if hasattr(raw, "landmark") else [
+        getattr(item, "landmark", item) for item in raw
+    ]
+    features = [feature for landmarks in poses
+                if (feature := _candidate_features(landmarks, width, height))]
+    features.sort(key=lambda feature: feature["center"][0])
+    return tuple({
+        "candidate_number": number,
+        "bbox": feature["box"],
+        "center": feature["center"],
+        "visibility": feature["visibility"],
+        "landmarks": feature["landmarks"],
+    } for number, feature in enumerate(features, start=1))
+
+
+def draw_candidate_boxes(image, candidates, selected_number=None):
+    """Draw numbered candidate boxes in the image's original coordinate space."""
+    height, width = image.shape[:2]
+    for candidate in candidates:
+        left, top, right, bottom = candidate["bbox"]
+        p1 = (round(left * width), round(top * height))
+        p2 = (round(right * width), round(bottom * height))
+        selected = candidate["candidate_number"] == selected_number
+        color = (40, 230, 80) if selected else (255, 190, 40)
+        cv2.rectangle(image, p1, p2, color, 3 if selected else 2, cv2.LINE_AA)
+        label = f"P{candidate['candidate_number']}" + (" SELECTED" if selected else "")
+        cv2.putText(image, label, (p1[0], max(24, p1[1] - 8)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2, cv2.LINE_AA)
 
 
 def draw_pose_landmarks(image, landmarks) -> None:

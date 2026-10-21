@@ -13,6 +13,8 @@ from src.pose_estimation import (
     PoseTargetTracker,
     analyze_pose_frame,
     create_pose_estimator,
+    detect_pose_candidates,
+    draw_candidate_boxes,
 )
 
 
@@ -53,7 +55,10 @@ def make_person(center_x, *, trunk_angle=0.0, height=0.65, visibility=0.95):
 class PoseEstimationTests(unittest.TestCase):
     def test_no_person_returns_empty_current_measurements(self):
         result = analyze_pose_frame(FakePose(), np.zeros((32, 48, 3), dtype=np.uint8))
-        self.assertEqual(result, PoseFrame(None, False, "no_person", None, {}))
+        self.assertFalse(result.pose_detected)
+        self.assertEqual(result.state, "no_person")
+        self.assertEqual(result.measurements, {})
+        self.assertEqual(result.candidates, ())
 
     def test_input_is_converted_from_bgr_to_rgb(self):
         image = np.zeros((2, 2, 3), dtype=np.uint8)
@@ -133,6 +138,27 @@ class PoseEstimationTests(unittest.TestCase):
             [left, right], 640, 360
         )
         self.assertIs(selected.landmarks, right)
+
+    def test_manual_first_frame_candidate_center_overrides_automatic_ranking(self):
+        standing = make_person(0.25, trunk_angle=0, height=0.82)
+        bending = make_person(0.72, trunk_angle=55, height=0.62)
+        selected = PoseTargetTracker(manual_target_center=(0.25, 0.52)).select(
+            [standing, bending], 640, 360
+        )
+        self.assertIs(selected.landmarks, standing)
+        self.assertEqual(selected.reason, "User-selected candidate lock.")
+
+    def test_candidate_preview_numbers_people_left_to_right_and_boxes_align(self):
+        left = make_person(0.2, trunk_angle=10)
+        right = make_person(0.8, trunk_angle=40)
+        pose = FakePose(SimpleNamespace(pose_landmarks=[right, left]))
+        frame = np.zeros((360, 640, 3), dtype=np.uint8)
+        candidates = detect_pose_candidates(pose, frame)
+        self.assertEqual([item["candidate_number"] for item in candidates], [1, 2])
+        self.assertLess(candidates[0]["center"][0], candidates[1]["center"][0])
+        output = frame.copy()
+        draw_candidate_boxes(output, candidates, selected_number=2)
+        self.assertTrue(np.any(np.all(output == (40, 230, 80), axis=2)))
 
     def test_pose_coordinates_and_selection_are_resolution_independent(self):
         candidate = make_person(0.72, trunk_angle=45)

@@ -12,7 +12,12 @@ from src.ui import (
     render_sidebar_brand,
     render_theme_toggle,
 )
-from src.video_processing import VideoProcessingError, process_video
+from src.video_processing import (
+    VideoProcessingError,
+    inspect_video_first_frame,
+    process_video,
+    render_target_selection_preview,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -71,8 +76,56 @@ with st.container(border=True):
 if uploaded_video is not None:
 
     st.caption(f"Selected file: {uploaded_video.name}")
+    upload_key = (
+        f"{getattr(uploaded_video, 'file_id', uploaded_video.name)}-"
+        f"{uploaded_video.name}-{uploaded_video.size}"
+    )
+    if st.session_state.get("target_preview_upload_key") != upload_key:
+        st.session_state.pop("target_preview_frame", None)
+        st.session_state.pop("target_preview_candidates", None)
+        st.session_state["target_preview_upload_key"] = upload_key
+        st.session_state[f"target_candidate_{upload_key}"] = 0
+
     with st.expander("Preview video and choose the lifter's starting position"):
         st.video(uploaded_video)
+        if st.button("Detect and number people in the first frame", key=f"detect_targets_{upload_key}"):
+            try:
+                with st.spinner("Detecting pose candidates in the first frame..."):
+                    preview_frame, candidates = inspect_video_first_frame(uploaded_video)
+                st.session_state["target_preview_frame"] = preview_frame
+                st.session_state["target_preview_candidates"] = candidates
+                st.rerun()
+            except VideoProcessingError as exc:
+                st.error(exc.user_message)
+                if exc.details:
+                    with st.expander("Target preview details"):
+                        st.code(f"{exc.stage}: {exc.details}")
+
+        preview_frame = st.session_state.get("target_preview_frame")
+        preview_candidates = st.session_state.get("target_preview_candidates", [])
+        selected_candidate = 0
+        if preview_frame:
+            options = [0, *[item["candidate_number"] for item in preview_candidates]]
+            selected_candidate = st.selectbox(
+                "Choose the person lifting the load",
+                options=options,
+                format_func=lambda value: (
+                    "Automatic tracking" if value == 0 else
+                    f"Person {value} · {preview_candidates[value - 1]['visibility']:.0%} keypoint visibility"
+                ),
+                key=f"target_candidate_{upload_key}",
+            )
+            st.image(
+                render_target_selection_preview(
+                    preview_frame, preview_candidates,
+                    selected_candidate if selected_candidate else None,
+                ),
+                caption="Boxes are numbered left-to-right. Green marks your manual selection.",
+                use_container_width=True,
+            )
+            if not preview_candidates:
+                st.warning("No pose candidates were detected in this frame. Try a clearer frame with the lifter visible.")
+
         target_region = st.selectbox(
             "Target person's starting position in the frame",
             options=["auto", "left", "center", "right"],
@@ -86,6 +139,12 @@ if uploaded_video is not None:
                 "If automatic selection is ambiguous, choose the lifter's initial "
                 "frame position. Tracking then follows that person across the clip."
             ),
+        )
+
+    manual_target_center = None
+    if preview_candidates and selected_candidate:
+        manual_target_center = tuple(
+            preview_candidates[selected_candidate - 1]["center"]
         )
 
 
@@ -108,7 +167,8 @@ if uploaded_video is not None:
             with st.spinner("Estimating pose landmarks..."):
 
                 video_bytes, data, fps = process_video(
-                    uploaded_video, progress, status, threshold, target_region
+                    uploaded_video, progress, status, threshold, target_region,
+                    manual_target_center,
                 )
 
             st.session_state["liftsafe_video_bytes"] = video_bytes
@@ -184,6 +244,16 @@ if "liftsafe_video_csv" in st.session_state:
         st.error("The annotated video is unavailable. Please analyze the video again.")
 
     total_frames = len(data)
+
+    with st.expander("Target tracking diagnostics"):
+        diagnostic_columns = [
+            name for name in (
+                "frame", "people_detected", "candidate_diagnostics",
+                "target_id", "candidate_number", "selection_reason",
+                "target_state", "pose_crop_used", "overlay_matches_selected_pose",
+            ) if name in data.columns
+        ]
+        st.dataframe(data[diagnostic_columns].head(100), width="stretch")
 
     detected = int(data["pose_detected"].sum())
 

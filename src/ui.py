@@ -9,6 +9,8 @@ import streamlit as st
 _STYLESHEET = Path(__file__).resolve().parents[1] / "assets" / "liquid_glass.css"
 _SIDEBAR_LOGO = Path(__file__).resolve().parents[1] / "assets" / "liftsafe_logo.svg"
 _SIDEBAR_ICON = Path(__file__).resolve().parents[1] / "assets" / "liftsafe_icon.svg"
+_SIDEBAR_LOGO_LIGHT = Path(__file__).resolve().parents[1] / "assets" / "liftsafe_logo_light.svg"
+_SIDEBAR_ICON_LIGHT = Path(__file__).resolve().parents[1] / "assets" / "liftsafe_icon_light.svg"
 
 
 def inject_app_styles() -> None:
@@ -70,8 +72,11 @@ def render_section_heading(title: str, detail: str | None = None) -> None:
 
 
 def render_sidebar_brand() -> None:
-    """Add lightweight project identity above Streamlit's native page links."""
-    st.logo(str(_SIDEBAR_LOGO), size="medium", icon_image=str(_SIDEBAR_ICON))
+    """Show a large, theme-appropriate LiftSafe brand in the sidebar."""
+    light_mode = get_theme_mode() == "Light"
+    logo = _SIDEBAR_LOGO_LIGHT if light_mode else _SIDEBAR_LOGO
+    icon = _SIDEBAR_ICON_LIGHT if light_mode else _SIDEBAR_ICON
+    st.logo(str(logo), size="large", icon_image=str(icon))
 
 
 def render_empty_state(icon: str, title: str, description: str) -> None:

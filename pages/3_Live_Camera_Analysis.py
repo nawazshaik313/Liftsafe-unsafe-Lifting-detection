@@ -9,23 +9,14 @@ import pandas as pd
 import streamlit as st
 from streamlit_webrtc import VideoProcessorBase, WebRtcMode, webrtc_streamer
 
-from src.camera_measurements import calculate_landmark_confidence, calculate_measurements
-from src.ui import (
-    inject_app_styles,
-    render_empty_state,
-    render_page_header,
-    render_section_heading,
-    render_sidebar_brand,
-    render_theme_toggle,
-)
+from src.camera_measurements import calculate_measurements
+from src.ui import inject_app_styles
 
 st.set_page_config(
     page_title="LiftSafe | Live Camera",
     page_icon="📷",
     layout="wide",
 )
-render_sidebar_brand()
-render_theme_toggle()
 inject_app_styles()
 
 mp_pose = mp.solutions.pose
@@ -70,9 +61,6 @@ class LiftSafeProcessor(VideoProcessorBase):
         measurements = {}
 
         if results.pose_landmarks:
-            confidence = calculate_landmark_confidence(
-                results.pose_landmarks.landmark, POSE_LANDMARK_INDICES
-            )
             mp_drawing.draw_landmarks(
                 image,
                 results.pose_landmarks,
@@ -116,8 +104,7 @@ class LiftSafeProcessor(VideoProcessorBase):
 
         if measurements:
             row = {
-                "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                "landmark_confidence": confidence,
+                "timestamp": datetime.now(timezone.utc).isoformat(timespec="microseconds"),
                 **measurements,
                 "review_flag": bool(review),
             }
@@ -145,24 +132,29 @@ class LiftSafeProcessor(VideoProcessorBase):
         self.close()
 
 
-render_page_header(
-    "Live camera analysis",
-    "View pose landmarks and approximate posture angles from your browser camera.",
-    eyebrow="LIFTSAFE  /  LIVE REVIEW",
+st.title("📷 LiftSafe — Live Camera Analysis")
+st.write(
+    "Use your browser camera to view body landmarks and "
+    "approximate posture angles. Allow camera permission in your browser, "
+    "keep your full body visible, and use a well-lit area."
 )
 
-with st.container(border=True):
-    render_section_heading("Research prototype", "Experimental image-space measurements")
-    st.warning(
-        "These 2D measurements depend on camera position and landmark visibility. "
-        "A threshold flag is for review only, not a validated ergonomic or "
-        "safe/unsafe lifting assessment."
-    )
-    threshold = st.slider(
-        "Trunk inclination review threshold (degrees)",
-        min_value=10, max_value=80, value=45, step=5,
-    )
-    st.caption("The threshold is experimental and is not a validated safety limit.")
+st.warning(
+    "**Research prototype:** These 2D measurements depend on "
+    "camera position and landmark visibility. A threshold flag "
+    "is for review only, not a validated ergonomic or "
+    "safe/unsafe lifting assessment."
+)
+
+threshold = st.slider(
+    "Trunk inclination review threshold (degrees)",
+    min_value=10, max_value=80, value=45, step=5,
+)
+
+st.caption(
+    "The threshold is experimental and is not a validated "
+    "safety limit."
+)
 
 ctx = webrtc_streamer(
     key="liftsafe-browser-camera",
@@ -171,25 +163,6 @@ ctx = webrtc_streamer(
     media_stream_constraints={
         "video": True,
         "audio": False,
-    },
-    video_html_attrs={
-        "autoPlay": True,
-        "controls": False,
-        "playsInline": True,
-        "style": {
-            "width": "100%",
-            "aspectRatio": "16 / 9",
-            "objectFit": "contain",
-            "backgroundColor": "#080d19",
-            "borderRadius": "16px",
-        },
-    },
-    translations={
-        "start": "Start camera",
-        "stop": "Stop camera",
-        "select_device": "Choose camera",
-        "device_access_denied": "Camera permission was denied. Allow camera access in browser settings, then try again.",
-        "device_not_available": "No camera was found. Connect or enable a camera and try again.",
     },
     rtc_configuration={
         "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}],
@@ -200,65 +173,54 @@ ctx = webrtc_streamer(
 if ctx.state.playing:
     st.success("Camera connected. Press Stop to end this session.")
 else:
-    with st.container(border=True):
-        render_empty_state(
-            "◎",
-            "Camera preview is ready",
-            "Use the Start camera control in the preview above and allow browser "
-            "camera access. For remote use, open LiftSafe over HTTPS.",
-        )
-        st.info(
-            "If the preview does not connect, check camera permission and network "
-            "access. Some restricted networks require a TURN relay."
-        )
+    st.info(
+        "Camera is stopped. Press Start and allow browser camera access. "
+        "If it does not connect, check permissions, HTTPS, and network "
+        "restrictions; some networks require TURN."
+    )
 
-render_section_heading("Measurement history", "Updates during a live camera session")
+st.subheader("Measurement history")
+
+# Keep the history in the Streamlit session after WebRTC stops its processor.
+if "live_camera_history" not in st.session_state:
+    st.session_state.live_camera_history = []
+if "live_camera_history_timestamps" not in st.session_state:
+    st.session_state.live_camera_history_timestamps = set()
 
 @st.fragment(run_every="1s")
 def render_measurement_history():
     processor = ctx.video_processor
     if processor:
-        history = processor.get_history()
+        processor_history = processor.get_history()
+        saved_history = st.session_state.live_camera_history
+        seen_timestamps = st.session_state.live_camera_history_timestamps
+        for row in processor_history:
+            timestamp = row.get("timestamp")
+            if timestamp not in seen_timestamps:
+                saved_history.append(row)
+                seen_timestamps.add(timestamp)
+        if len(saved_history) > 10000:
+            del saved_history[:-10000]
 
-        if history:
-            log_df = pd.DataFrame(history)
-            latest = log_df.iloc[-1]
-            render_section_heading("Current measurements", "Most recent frame with visible landmarks")
-            metric_columns = st.columns(4)
-            metric_specs = (
-                ("Trunk inclination (°)", "Trunk inclination", False),
-                ("Left knee angle (°)", "Left knee", False),
-                ("Right knee angle (°)", "Right knee", False),
-                ("landmark_confidence", "Keypoint visibility", True),
-            )
-            for column, (key, label, is_confidence) in zip(metric_columns, metric_specs):
-                value = latest.get(key)
-                if pd.notna(value):
-                    display = f"{value * 100:.0f}%" if is_confidence else f"{value:.1f}°"
-                else:
-                    display = "—"
-                column.metric(label, display)
-            st.dataframe(log_df.tail(100), width="stretch")
+    history = st.session_state.live_camera_history
+    if history:
+        log_df = pd.DataFrame(history)
+        st.dataframe(log_df.tail(100), width="stretch")
 
-            st.download_button(
-                "Download measurement history (CSV)",
-                data=log_df.to_csv(index=False).encode("utf-8"),
-                file_name="liftsafe_live_camera_measurements.csv",
-                mime="text/csv",
-                key="download_live_camera_history",
-            )
-        else:
-            render_empty_state(
-                "◉",
-                "Waiting for visible landmarks",
-                "Check camera permission and keep your full body in view."
-            )
-    else:
-        render_empty_state(
-            "◉",
-            "Measurements will appear here",
-            "Start the camera and keep visible landmarks in frame to begin the live history.",
+        st.download_button(
+            "Download measurement history (CSV)",
+            data=log_df.to_csv(index=False).encode("utf-8"),
+            file_name="liftsafe_live_camera_measurements.csv",
+            mime="text/csv",
+            key="download_live_camera_history",
         )
+    elif processor:
+        st.info(
+            "Waiting for visible body landmarks. Check camera permission "
+            "and keep your body in view."
+        )
+    else:
+        st.caption("Start the camera to collect measurements.")
 
 
 render_measurement_history()

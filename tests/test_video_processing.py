@@ -13,14 +13,16 @@ from src import video_processing
 
 
 class FakePose:
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *_):
-        return False
+    def close(self):
+        pass
 
     def process(self, _frame):
         return SimpleNamespace(pose_landmarks=None)
+
+
+class FailingPose(FakePose):
+    def process(self, _frame):
+        raise RuntimeError("inference broke")
 
 
 class NoOpProgress:
@@ -43,75 +45,178 @@ class VideoProcessingTests(unittest.TestCase):
         self.tempdirs.append(Path(directory.name))
         return directory
 
-    def _run(self, payload):
-        return video_processing.process_video(
-            io.BytesIO(payload), NoOpProgress(), NoOpStatus()
-        )
+    def _run(self, payload, name="sample.mp4"):
+        upload = io.BytesIO(payload)
+        upload.name = name
+        return video_processing.process_video(upload, NoOpProgress(), NoOpStatus())
+
+    def _short_video(self, frame_count=3):
+        with tempfile.TemporaryDirectory(prefix="liftsafe_test_input_") as source_dir:
+            source = Path(source_dir) / "short.mp4"
+            writer = cv2.VideoWriter(
+                str(source), cv2.VideoWriter_fourcc(*"mp4v"), 10.0, (64, 64)
+            )
+            if not writer.isOpened():
+                self.skipTest("OpenCV mp4v encoder is unavailable")
+            for index in range(frame_count):
+                frame = np.full((64, 64, 3), index * 35, dtype=np.uint8)
+                writer.write(frame)
+            writer.release()
+            return source.read_bytes()
 
     def test_empty_and_oversized_uploads_are_rejected(self):
-        with self.assertRaisesRegex(ValueError, "empty"):
+        with self.assertRaisesRegex(video_processing.VideoProcessingError, "empty"):
             self._run(b"")
 
         with patch.object(video_processing, "MAX_UPLOAD_BYTES", 3):
-            with self.assertRaisesRegex(ValueError, "500 MB"):
+            with self.assertRaisesRegex(video_processing.VideoProcessingError, "500 MB"):
                 self._run(b"1234")
 
-    def test_corrupt_video_is_rejected_and_temporary_files_are_removed(self):
+    def test_corrupt_video_reports_decoder_stage_and_cleans_temp_files(self):
         with (
-            patch.object(video_processing.shutil, "which", return_value="ffmpeg"),
             patch.object(video_processing.tempfile, "TemporaryDirectory", self._track_tempdir),
+            self.assertRaises(video_processing.VideoProcessingError) as raised,
         ):
-            with self.assertRaisesRegex(ValueError, "could not read"):
-                self._run(b"not a video")
+            self._run(b"not a video")
 
+        self.assertEqual(raised.exception.stage, "decoder_open")
+        self.assertTrue(raised.exception.details)
         self.assertEqual(len(self.tempdirs), 1)
         self.assertFalse(self.tempdirs[0].exists())
 
-    def test_missing_ffmpeg_has_actionable_error(self):
-        with patch.object(video_processing.shutil, "which", return_value=None):
-            with self.assertRaisesRegex(RuntimeError, "FFmpeg is required"):
-                self._run(b"non-empty upload")
-
-    @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg is not installed")
-    def test_processing_timeout_releases_handles_and_temporary_files(self):
-        with tempfile.TemporaryDirectory(prefix="liftsafe_test_input_") as source_dir:
-            source = Path(source_dir) / "short.mp4"
-            writer = cv2.VideoWriter(
-                str(source), cv2.VideoWriter_fourcc(*"mp4v"), 10.0, (64, 64)
-            )
-            if not writer.isOpened():
-                self.skipTest("OpenCV mp4v encoder is unavailable")
-            writer.write(np.zeros((64, 64, 3), dtype=np.uint8))
-            writer.release()
-            payload = source.read_bytes()
-
+    def test_missing_ffmpeg_does_not_block_decoding_but_reports_output_stage(self):
+        payload = self._short_video()
         with (
-            patch.object(video_processing.mp_pose, "Pose", return_value=FakePose()),
-            patch.object(video_processing, "MAX_VIDEO_PROCESSING_SECONDS", -1),
-            patch.object(video_processing.tempfile, "TemporaryDirectory", self._track_tempdir),
+            patch.object(video_processing, "create_pose_estimator", return_value=FakePose()),
+            patch.object(video_processing.shutil, "which", return_value=None),
+            self.assertRaises(video_processing.VideoProcessingError) as raised,
         ):
-            with self.assertRaisesRegex(RuntimeError, "10 minute processing limit"):
-                self._run(payload)
+            self._run(payload)
+        self.assertEqual(raised.exception.stage, "output_encode")
+        self.assertIn("Frames were analyzed", raised.exception.user_message)
 
-        self.assertEqual(len(self.tempdirs), 1)
-        self.assertFalse(self.tempdirs[0].exists())
+    def test_open_failure_is_distinguished_from_zero_decoded_frames(self):
+        class ClosedCapture:
+            def isOpened(self):
+                return False
 
-    @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg is not installed")
-    def test_short_video_returns_playable_output_and_cleans_temp_files(self):
-        with tempfile.TemporaryDirectory(prefix="liftsafe_test_input_") as source_dir:
-            source = Path(source_dir) / "short.mp4"
-            writer = cv2.VideoWriter(
-                str(source), cv2.VideoWriter_fourcc(*"mp4v"), 10.0, (64, 64)
-            )
-            if not writer.isOpened():
-                self.skipTest("OpenCV mp4v encoder is unavailable")
-            for _ in range(3):
-                writer.write(np.zeros((64, 64, 3), dtype=np.uint8))
-            writer.release()
-            payload = source.read_bytes()
+            def read(self):
+                return False, None
+
+            def release(self):
+                self.released = True
 
         with (
-            patch.object(video_processing.mp_pose, "Pose", return_value=FakePose()),
+            patch.object(video_processing.cv2, "VideoCapture", return_value=ClosedCapture()),
+            patch.object(video_processing.shutil, "which", return_value=None),
+            tempfile.TemporaryDirectory() as directory,
+        ):
+            source = Path(directory) / "source.mp4"
+            source.write_bytes(b"invalid")
+            with self.assertRaises(video_processing.VideoProcessingError) as raised:
+                with video_processing.SequentialVideoReader(source):
+                    pass
+        self.assertEqual(raised.exception.stage, "decoder_open")
+
+    def test_open_but_empty_decoder_is_reported_separately_and_released(self):
+        class EmptyCapture:
+            released = False
+
+            def isOpened(self):
+                return True
+
+            def read(self):
+                return False, None
+
+            def release(self):
+                self.released = True
+
+        capture = EmptyCapture()
+        with (
+            patch.object(video_processing.cv2, "VideoCapture", return_value=capture),
+            patch.object(video_processing.shutil, "which", return_value=None),
+            tempfile.TemporaryDirectory() as directory,
+        ):
+            source = Path(directory) / "source.mp4"
+            source.write_bytes(b"container bytes")
+            with self.assertRaises(video_processing.VideoProcessingError) as raised:
+                with video_processing.SequentialVideoReader(source):
+                    pass
+        self.assertEqual(raised.exception.stage, "decode_zero_frames")
+        self.assertTrue(capture.released)
+
+    def test_sequential_decode_does_not_trust_frame_count_metadata(self):
+        payload = self._short_video(frame_count=4)
+        real_capture = cv2.VideoCapture
+
+        class MisleadingCountCapture:
+            def __init__(self, path):
+                self.capture = real_capture(path)
+
+            def isOpened(self):
+                return self.capture.isOpened()
+
+            def read(self):
+                return self.capture.read()
+
+            def get(self, prop):
+                if prop == cv2.CAP_PROP_FRAME_COUNT:
+                    return 1
+                return self.capture.get(prop)
+
+            def release(self):
+                self.capture.release()
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.mp4"
+            source.write_bytes(payload)
+            with patch.object(
+                video_processing.cv2, "VideoCapture", MisleadingCountCapture
+            ):
+                with video_processing.SequentialVideoReader(source) as reader:
+                    frames = list(reader)
+                    self.assertEqual(reader.total_frames, 1)
+        self.assertEqual(len(frames), 4)
+
+    @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "FFmpeg tools are not installed")
+    def test_ffmpeg_fallback_decodes_when_opencv_cannot_open(self):
+        payload = self._short_video(frame_count=2)
+
+        class ClosedCapture:
+            def isOpened(self):
+                return False
+
+            def read(self):
+                return False, None
+
+            def release(self):
+                pass
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.mp4"
+            source.write_bytes(payload)
+            with patch.object(video_processing.cv2, "VideoCapture", return_value=ClosedCapture()):
+                with video_processing.SequentialVideoReader(source) as reader:
+                    frames = list(reader)
+                    self.assertEqual(reader.decoder, "ffmpeg")
+        self.assertEqual(len(frames), 2)
+
+    @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg is not installed")
+    def test_pose_failure_is_not_mislabeled_as_decode_failure(self):
+        payload = self._short_video(frame_count=1)
+        with (
+            patch.object(video_processing, "create_pose_estimator", return_value=FailingPose()),
+            self.assertRaises(video_processing.VideoProcessingError) as raised,
+        ):
+            self._run(payload)
+        self.assertEqual(raised.exception.stage, "pose_inference")
+        self.assertIn("Frame 0", raised.exception.details)
+
+    @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg is not installed")
+    def test_real_short_video_processes_frames_and_cleans_temporary_files(self):
+        payload = self._short_video(frame_count=3)
+        with (
+            patch.object(video_processing, "create_pose_estimator", return_value=FakePose()),
             patch.object(video_processing.tempfile, "TemporaryDirectory", self._track_tempdir),
         ):
             output, measurements, fps = self._run(payload)
@@ -123,6 +228,7 @@ class VideoProcessingTests(unittest.TestCase):
         self.assertEqual(fps, 10.0)
         self.assertEqual(len(self.tempdirs), 1)
         self.assertFalse(self.tempdirs[0].exists())
+
         with tempfile.TemporaryDirectory(prefix="liftsafe_test_decode_") as check_dir:
             result_path = Path(check_dir) / "result.mp4"
             result_path.write_bytes(output)

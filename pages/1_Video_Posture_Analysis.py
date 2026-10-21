@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -11,7 +12,9 @@ from src.ui import (
     render_sidebar_brand,
     render_theme_toggle,
 )
-from src.video_processing import process_video
+from src.video_processing import VideoProcessingError, process_video
+
+logger = logging.getLogger(__name__)
 
 st.set_page_config(
 
@@ -72,6 +75,14 @@ if uploaded_video is not None:
 
     if st.button("Analyze video", type="primary"):
 
+        # Never leave a previous upload's measurements visible after a failure.
+        for key in (
+            "liftsafe_video_bytes",
+            "liftsafe_video_csv",
+            "liftsafe_video_fps",
+        ):
+            st.session_state.pop(key, None)
+
         progress = st.progress(0.0)
 
         status = st.empty()
@@ -90,11 +101,33 @@ if uploaded_video is not None:
 
             st.session_state["liftsafe_video_fps"] = fps
 
-            st.success("Video analysis completed.")
+            if data["trunk_inclination_2d_deg"].notna().any():
+                st.success("Video frames decoded and pose measurements are available.")
+            elif bool(data["pose_detected"].any()):
+                st.warning(
+                    "Pose measurements unavailable — improve lighting, camera angle, or body visibility."
+                )
+            else:
+                st.warning(
+                    "No person detected — move into the video frame and ensure your full upper body is visible. "
+                    "The video decoded, but no usable pose landmarks were found."
+                )
+
+        except VideoProcessingError as exc:
+
+            logger.warning("Video analysis failed at %s: %s", exc.stage, exc.details)
+            st.error(exc.user_message)
+            with st.expander("Technical details"):
+                st.caption(f"Processing stage: {exc.stage}")
+                if exc.details:
+                    st.code(exc.details)
 
         except Exception as exc:
 
-            st.error(f"Video analysis failed: {exc}")
+            logger.exception("Unexpected video analysis error")
+            st.error("An unexpected error interrupted video analysis.")
+            with st.expander("Technical details"):
+                st.code(f"{type(exc).__name__}: {exc}")
 
 if "liftsafe_video_csv" in st.session_state:
 

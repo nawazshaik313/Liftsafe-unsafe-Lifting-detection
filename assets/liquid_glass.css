@@ -34,6 +34,24 @@ html, body, [data-testid="stAppViewContainer"] {
 [data-testid="stMainBlockContainer"] {
   max-width: 1800px;
   padding: 2rem clamp(1rem, 2vw, 2.25rem) 3.25rem;
+  animation: ls-page-enter .42s ease-out both;
+}
+@keyframes ls-page-enter {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes ls-water-ripple {
+  0% { opacity: .52; transform: translate(-50%, -50%) scale(.15); }
+  72% { opacity: .2; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(4.6); }
+}
+/* Enlarge Streamlit's logo beyond its built-in 32px "large" limit. */
+[data-testid="stLogo"] img {
+  width: auto !important;
+  height: 56px !important;
+  max-height: 56px !important;
+  max-width: 100% !important;
+  object-fit: contain;
 }
 [data-testid="stHorizontalBlock"] { align-items: stretch; }
 [data-testid="stHorizontalBlock"] [data-testid="column"] { min-width: 0; }
@@ -296,11 +314,47 @@ h1, h2, h3, h4, p, li, label,
 }
 [data-testid="stFileUploader"] section:hover { background: rgba(255,255,255,.10) !important; }
 [data-testid="stButton"] button, [data-testid="stDownloadButton"] button {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   border: 1px solid var(--ls-line-strong);
   border-radius: 13px;
   color: var(--ls-ink);
   background: linear-gradient(135deg, rgba(126, 154, 255, .24), rgba(90, 211, 235, .15));
   transition: transform .18s ease, border-color .18s ease, background-color .18s ease;
+}
+[data-testid="stButton"] button::after,
+[data-testid="stDownloadButton"] button::after,
+[data-testid="stSidebarNav"] a::after,
+[data-testid="stSegmentedControl"] button::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(115, 227, 245, .8);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(115, 227, 245, .32), rgba(115, 227, 245, 0) 72%);
+  opacity: 0;
+  pointer-events: none;
+}
+[data-testid="stButton"] button:active::after,
+[data-testid="stButton"] button:focus::after,
+[data-testid="stDownloadButton"] button:active::after,
+[data-testid="stDownloadButton"] button:focus::after,
+[data-testid="stSidebarNav"] a:active::after,
+[data-testid="stSidebarNav"] a:focus::after,
+[data-testid="stSegmentedControl"] button:active::after,
+[data-testid="stSegmentedControl"] button:focus::after {
+  animation: ls-water-ripple .68s ease-out;
+}
+[data-testid="stSidebarNav"] a,
+[data-testid="stSegmentedControl"] button {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
 }
 [data-testid="stButton"] button:hover, [data-testid="stDownloadButton"] button:hover {
   border-color: rgba(151, 225, 255, .65);

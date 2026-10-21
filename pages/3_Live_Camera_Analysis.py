@@ -10,13 +10,15 @@ import streamlit as st
 from streamlit_webrtc import VideoProcessorBase, WebRtcMode, webrtc_streamer
 
 from src.camera_measurements import calculate_measurements
-from src.ui import inject_app_styles
+from src.ui import inject_app_styles, render_sidebar_brand, render_theme_toggle
 
 st.set_page_config(
     page_title="LiftSafe | Live Camera",
     page_icon="📷",
     layout="wide",
 )
+render_sidebar_brand()
+render_theme_toggle()
 inject_app_styles()
 
 mp_pose = mp.solutions.pose

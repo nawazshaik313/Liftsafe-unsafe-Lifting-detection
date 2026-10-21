@@ -28,7 +28,7 @@ def inject_app_styles() -> None:
 def get_theme_mode() -> str:
     """Return the user's persistent in-app appearance selection."""
     selected = st.session_state.get("liftsafe_theme")
-    return selected if selected in {"Dark", "Light"} else "Dark"
+    return selected if selected in {"Dark", "Light"} else "Light"
 
 
 def render_theme_toggle() -> None:
@@ -37,7 +37,7 @@ def render_theme_toggle() -> None:
     st.sidebar.segmented_control(
         "Appearance",
         options=["Dark", "Light"],
-        default="Dark",
+        default="Light",
         key="liftsafe_theme",
         label_visibility="collapsed",
         help="Switch the Liquid Glass interface between dark and light modes.",

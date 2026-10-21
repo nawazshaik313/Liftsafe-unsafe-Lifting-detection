@@ -96,7 +96,15 @@ if uploaded_video is not None:
         st.session_state["target_preview_upload_key"] = upload_key
         st.session_state[f"target_candidate_{upload_key}"] = 0
 
-    with st.expander("Preview video and choose the lifter's starting position"):
+    with st.expander(
+        "Preview video and choose the lifter's starting position",
+        expanded=True,
+    ):
+        st.caption(
+            "Automatic tracking uses pose and movement clues and can be uncertain "
+            "when several people are visible. Detect the first-frame candidates "
+            "and select the lifter to lock the analysis to that person."
+        )
         st.video(uploaded_video)
         if st.button("Detect and number people in the first frame", key=f"detect_targets_{upload_key}"):
             try:

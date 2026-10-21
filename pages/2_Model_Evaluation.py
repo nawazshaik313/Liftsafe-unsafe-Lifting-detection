@@ -1,4 +1,5 @@
 from pathlib import Path
+import logging
 
 import pandas as pd
 import streamlit as st
@@ -11,6 +12,8 @@ from sklearn.metrics import (
     confusion_matrix,
     f1_score,
 )
+
+logger = logging.getLogger(__name__)
 
 st.set_page_config(
     page_title="LiftSafe | Model Evaluation",
@@ -66,6 +69,14 @@ for name, frame in frames.items():
     if frame[list(required)].isna().any().any():
         st.error(f"{name} predictions contain missing values.")
         st.stop()
+
+for model_name, frame in frames.items():
+    for prediction in frame.itertuples(index=False):
+        logger.debug(
+            "evaluation prediction model=%s source=cached_csv subject=%s trial=%s actual=LI %s predicted=LI %s runtime_inference=false",
+            model_name, prediction.subject_id, prediction.trial,
+            prediction.li_condition, prediction.predicted_li_condition,
+        )
 
 reference_keys = frames["Temporal CNN"][
     ["subject_id", "trial", "li_condition"]

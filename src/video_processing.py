@@ -523,11 +523,13 @@ def process_video(
                         if pose_result.landmarks is not None:
                             draw_pose_landmarks(frame, pose_result.landmarks.landmark)
                         logger.debug(
-                            "video frame=%s candidates=%s selected_track=%s selected_candidate=%s reason=%s crop_used=false overlay_same_pose=%s",
-                            frame_index, row["candidate_diagnostics"],
+                            "video prediction frame=%s pose_model=MediaPipe Tasks PoseLandmarker Lite (num_poses=4) pose_state=%s candidates=%s selected_track=%s selected_candidate=%s reason=%s overlay_same_pose=%s classifier_model=none cnn_invoked=false threshold_review_model=trunk-angle-rule threshold=%s review=%s",
+                            frame_index, pose_result.state,
+                            row["candidate_diagnostics"],
                             pose_result.target_id, pose_result.candidate_number,
                             pose_result.selection_reason,
                             row["overlay_matches_selected_pose"],
+                            threshold, review,
                         )
                         if review:
                             cv2.rectangle(frame, (0, 0), (width, 72), (0, 140, 255), -1)

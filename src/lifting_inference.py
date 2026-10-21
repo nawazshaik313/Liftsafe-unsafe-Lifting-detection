@@ -1,6 +1,11 @@
 """Feature summaries shared by the dashboard's trained LI models."""
 
+import logging
+
 import numpy as np
+
+
+logger = logging.getLogger(__name__)
 
 
 def summarize_for_logistic_regression(sequence):
@@ -38,6 +43,14 @@ def compare_model_predictions(logistic_model, random_forest_model, sequence):
     )
     forest_prediction = _predict_one(
         random_forest_model, forest_features, "Random Forest"
+    )
+    logger.info(
+        "prediction model=LogisticRegression output=LI %s input_shape=%s feature_schema=64x4_to_16_summary",
+        logistic_prediction, logistic_features.shape,
+    )
+    logger.info(
+        "prediction model=RandomForest output=LI %s input_shape=%s feature_schema=64x4_to_16_summary",
+        forest_prediction, forest_features.shape,
     )
     return {
         "logistic_features": logistic_features,

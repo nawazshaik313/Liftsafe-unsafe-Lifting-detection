@@ -3,9 +3,27 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from datetime import datetime, timezone
 import math
 
 import numpy as np
+
+
+def is_fresh_timestamp(timestamp, *, max_age_seconds=2.5, now=None):
+    """Return whether an ISO timestamp is recent enough for live UI display."""
+    if not timestamp:
+        return False
+    try:
+        measured_at = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return False
+    if measured_at.tzinfo is None:
+        measured_at = measured_at.replace(tzinfo=timezone.utc)
+    current_time = now or datetime.now(timezone.utc)
+    if current_time.tzinfo is None:
+        current_time = current_time.replace(tzinfo=timezone.utc)
+    age = (current_time - measured_at).total_seconds()
+    return 0 <= age <= max_age_seconds
 
 
 def calculate_angle(a, b, c):

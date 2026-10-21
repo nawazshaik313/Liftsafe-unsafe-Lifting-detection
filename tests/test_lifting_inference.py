@@ -36,9 +36,10 @@ class LiftingInferenceTests(unittest.TestCase):
         self.assertEqual(forest[0, 4], self.sequence[:, 0].std())
 
     def test_agreement_and_disagreement_are_computed(self):
-        agreement = compare_model_predictions(
-            DummyModel(2), DummyModel(2), self.sequence
-        )
+        with self.assertLogs("src.lifting_inference", level="INFO") as captured:
+            agreement = compare_model_predictions(
+                DummyModel(2), DummyModel(2), self.sequence
+            )
         disagreement = compare_model_predictions(
             DummyModel(1), DummyModel(3), self.sequence
         )
@@ -46,6 +47,8 @@ class LiftingInferenceTests(unittest.TestCase):
         self.assertFalse(disagreement["agree"])
         self.assertEqual(disagreement["logistic_prediction"], 1)
         self.assertEqual(disagreement["random_forest_prediction"], 3)
+        self.assertTrue(any("model=LogisticRegression output=LI 2" in row for row in captured.output))
+        self.assertTrue(any("model=RandomForest output=LI 2" in row for row in captured.output))
 
     def test_invalid_shape_or_model_dimension_is_rejected(self):
         with self.assertRaises(ValueError):

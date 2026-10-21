@@ -10,6 +10,8 @@ import pandas as pd
 import streamlit as st
 from streamlit_webrtc import VideoProcessorBase, WebRtcMode, webrtc_streamer
 
+from src.camera_measurements import is_fresh_timestamp
+from src.charts import line_figure, render_glass_chart
 from src.pose_estimation import (
     PoseTargetTracker,
     analyze_pose_frame,
@@ -74,7 +76,8 @@ class LiftSafeProcessor(VideoProcessorBase):
                 pose_result = analyze_pose_frame(self.pose, image, self.target_tracker)
             measurements = pose_result.measurements
             trunk = measurements.get("Trunk inclination (°)")
-            review = None if trunk is None else trunk >= self.threshold
+            trunk_valid = trunk is not None and np.isfinite(trunk)
+            review = bool(trunk >= self.threshold) if trunk_valid else None
             timestamp = datetime.now(timezone.utc).isoformat(timespec="microseconds")
             latest = {
                 "state": pose_result.state,
@@ -95,10 +98,12 @@ class LiftSafeProcessor(VideoProcessorBase):
             if pose_result.landmarks is not None:
                 draw_pose_landmarks(image, pose_result.landmarks.landmark)
             logger.debug(
-                "live frame candidates=%s selected_track=%s candidate=%s bbox=%s reason=%s crop_used=false overlay_same_pose=%s",
+                "live prediction pose_model=MediaPipe Tasks PoseLandmarker Lite (num_poses=4) pose_state=%s candidates=%s selected_track=%s candidate=%s bbox=%s reason=%s overlay_same_pose=%s classifier_model=none cnn_invoked=false threshold_review_model=trunk-angle-rule threshold=%s review=%s measurements=%s",
+                pose_result.state,
                 pose_result.candidates, pose_result.target_id,
                 pose_result.candidate_number, pose_result.target_bbox,
                 pose_result.selection_reason, pose_result.landmarks is not None,
+                self.threshold, review, measurements,
             )
             if pose_result.state == "target_ambiguous":
                 label, color = "TARGET AMBIGUOUS - FRAME ONE PERSON", (0, 165, 255)
@@ -106,7 +111,7 @@ class LiftSafeProcessor(VideoProcessorBase):
                 label, color = "TRACKED PERSON TEMPORARILY LOST", (0, 165, 255)
             elif not pose_result.pose_detected:
                 label, color = "NO PERSON DETECTED", (0, 165, 255)
-            elif trunk is None:
+            elif not trunk_valid:
                 label, color = "POSE DETECTED - VISIBILITY INSUFFICIENT", (0, 165, 255)
             elif review:
                 label, color = "REVIEW THRESHOLD EXCEEDED", (0, 0, 255)
@@ -129,10 +134,11 @@ class LiftSafeProcessor(VideoProcessorBase):
 
             with self.lock:
                 self.latest = latest
-                if trunk is not None:
+                if trunk_valid:
                     self.history.append({
                         "timestamp": timestamp,
                         "landmark_confidence": pose_result.visibility,
+                        "review_threshold": self.threshold,
                         **measurements,
                         "review_flag": bool(review),
                     })
@@ -284,7 +290,28 @@ def render_measurement_history():
         else:
             latest = processor.get_latest()
             state = latest.get("state")
-            if state == "no_person":
+            timestamp = latest.get("timestamp")
+            stale = (
+                ctx.state.playing
+                and timestamp is not None
+                and not is_fresh_timestamp(timestamp)
+            )
+            if stale:
+                try:
+                    age_seconds = max(
+                        0.0,
+                        (datetime.now(timezone.utc) - datetime.fromisoformat(
+                            timestamp.replace("Z", "+00:00")
+                        )).total_seconds(),
+                    )
+                except (TypeError, ValueError):
+                    age_seconds = None
+                age_text = f" ({age_seconds:.1f}s old)" if age_seconds is not None else ""
+                st.warning(
+                    "Camera frames are stale" + age_text
+                    + ". The latest measurement is not current; check the camera stream."
+                )
+            elif state == "no_person":
                 st.warning(
                     "No person detected — move into the camera frame and ensure your full upper body is visible."
                 )
@@ -317,11 +344,13 @@ def render_measurement_history():
                         f"Review threshold exceeded: trunk inclination {trunk:.1f}° "
                         f"is at or above the configured {threshold}° threshold."
                     )
-                else:
+                elif review is False:
                     st.success(
                         f"Pose detected. Trunk inclination {trunk:.1f}° is within "
                         f"the configured {threshold}° review threshold."
                     )
+                else:
+                    st.warning("Trunk measurement is unavailable or non-finite for this frame.")
                 metric_columns = st.columns(4)
                 metrics = (
                     ("Trunk inclination (°)", "Trunk inclination"),
@@ -331,7 +360,10 @@ def render_measurement_history():
                 )
                 for column, (key, label) in zip(metric_columns, metrics):
                     value = measurements.get(key)
-                    column.metric(label, f"{value:.1f}°" if value is not None else "—")
+                    column.metric(
+                        label,
+                        f"{value:.1f}°" if value is not None and np.isfinite(value) else "—",
+                    )
                 visibility = latest.get("visibility")
                 if visibility is not None:
                     st.caption(f"Keypoint visibility/tracking quality: {visibility:.0%}")
@@ -348,7 +380,7 @@ def render_measurement_history():
             if latest.get("timestamp"):
                 st.caption(f"Latest frame: {latest['timestamp']} UTC")
             candidates = latest.get("candidates", ())
-            if candidates:
+            if candidates and not stale:
                 st.caption(
                     "Camera candidates are numbered left-to-right. Lock the lifter if "
                     "automatic tracking chose a different person."
@@ -367,7 +399,56 @@ def render_measurement_history():
     if history:
         st.markdown("### Measurement history")
         log_df = pd.DataFrame(history)
+        st.caption(
+            "Only frames with a finite trunk-angle measurement are included. "
+            "Review flags are experimental threshold checks, not safety labels."
+        )
+        valid_count = int(log_df["Trunk inclination (°)"].notna().sum())
+        flagged_events = log_df[log_df["review_flag"].fillna(False).astype(bool)]
+        summary_columns = st.columns(3)
+        summary_columns[0].metric("Valid measured frames", valid_count)
+        summary_columns[1].metric("Frames flagged for review", len(flagged_events))
+        summary_columns[2].metric(
+            "Latest review threshold",
+            f"{float(log_df['review_threshold'].iloc[-1]):g}°"
+            if "review_threshold" in log_df and not log_df.empty else f"{threshold}°",
+        )
+
+        log_df["frame_time"] = pd.to_datetime(log_df["timestamp"], utc=True, errors="coerce")
+        log_df["time_seconds"] = (
+            log_df["frame_time"] - log_df["frame_time"].dropna().min()
+        ).dt.total_seconds()
+        chart_columns = ["Trunk inclination (°)"]
+        chart_labels = {"Trunk inclination (°)": "Trunk inclination"}
+        if "review_threshold" in log_df:
+            chart_columns.append("review_threshold")
+            chart_labels["review_threshold"] = "Configured review threshold"
+        render_glass_chart(
+            line_figure(
+                log_df.dropna(subset=["time_seconds"]),
+                "time_seconds",
+                chart_columns,
+                labels=chart_labels,
+                x_title="Time since first valid measurement (seconds)",
+                y_title="Angle (degrees)",
+                height=300,
+            ),
+            key="live_camera_angle_history",
+        )
+
         st.dataframe(log_df.tail(100), width="stretch")
+
+        st.markdown("### Time-stamped review events")
+        if flagged_events.empty:
+            st.info("No valid camera measurements have met the configured review threshold yet.")
+        else:
+            event_columns = [
+                column for column in (
+                    "timestamp", "Trunk inclination (°)", "review_threshold",
+                    "landmark_confidence",
+                ) if column in flagged_events.columns
+            ]
+            st.dataframe(flagged_events[event_columns], width="stretch", hide_index=True)
 
         st.download_button(
             "Download measurement history (CSV)",

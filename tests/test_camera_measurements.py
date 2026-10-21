@@ -1,14 +1,30 @@
 import unittest
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 from src.camera_measurements import (
     calculate_angle,
     calculate_landmark_confidence,
     calculate_measurements,
+    is_fresh_timestamp,
 )
 
 
 class CameraMeasurementTests(unittest.TestCase):
+    def test_live_timestamp_freshness_rejects_old_future_and_invalid_times(self):
+        now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        self.assertTrue(is_fresh_timestamp(
+            (now - timedelta(seconds=1)).isoformat(), now=now
+        ))
+        self.assertFalse(is_fresh_timestamp(
+            (now - timedelta(seconds=3)).isoformat(), now=now
+        ))
+        self.assertFalse(is_fresh_timestamp(
+            (now + timedelta(seconds=1)).isoformat(), now=now
+        ))
+        self.assertFalse(is_fresh_timestamp("not-a-timestamp", now=now))
+        self.assertFalse(is_fresh_timestamp(None, now=now))
+
     def test_key_landmark_confidence_is_bounded_and_handles_missing_values(self):
         landmarks = [
             SimpleNamespace(visibility=0.8),

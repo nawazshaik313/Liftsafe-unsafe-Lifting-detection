@@ -16,6 +16,17 @@ outputs/*.mp4
 outputs/pose_video/
 outputs/pose_sample.jpg
 
+# Local research exports: keep measurements and the source-video manifest private
+data/processed/video_manifest.csv
+outputs/ap_0016_measurements.csv
+outputs/gd_0018_measurements.csv
+
+# Generated exploratory plots; regenerate from authorized source data as needed
+outputs/angle_plot.png
+outputs/inail_trunk_by_li.png
+outputs/posture_feature_scatter.png
+outputs/trunk_inclination.png
+
 # Keep required model artifacts and evaluation reports
 !outputs/inail_cnn/
 

@@ -5,16 +5,30 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from src.charts import bar_figure, line_figure, render_glass_chart
+from src.lifting_inference import compare_model_predictions
+from src.ui import (
+    inject_app_styles,
+    render_page_header,
+    render_section_heading,
+    render_sidebar_brand,
+    render_theme_toggle,
+)
+
 st.set_page_config(
     page_title="LiftSafe | Posture Analysis",
     page_icon="🏋️",
     layout="wide",
 )
+render_sidebar_brand()
+render_theme_toggle()
+inject_app_styles()
 
-DATA_DIR = Path("data/processed/inail_lifting_sequences")
-MODEL_PATH = Path("outputs/inail_cnn/li_condition_logistic_regression.joblib")
-RF_MODEL_PATH = Path("outputs/inail_cnn/li_condition_random_forest.joblib")
-METADATA_PATH = Path("outputs/inail_cnn/li_condition_model_metadata.json")
+ROOT_DIR = Path(__file__).resolve().parent
+DATA_DIR = ROOT_DIR / "data/processed/inail_lifting_sequences"
+MODEL_PATH = ROOT_DIR / "outputs/inail_cnn/li_condition_logistic_regression.joblib"
+RF_MODEL_PATH = ROOT_DIR / "outputs/inail_cnn/li_condition_random_forest.joblib"
+METADATA_PATH = ROOT_DIR / "outputs/inail_cnn/li_condition_model_metadata.json"
 
 FEATURE_NAMES = [
     "Trunk inclination (°)",
@@ -47,35 +61,10 @@ def load_data():
     return sequences, metadata
 
 
-def summarize_sequence(sequence):
-    """Keep feature extraction identical to the saved baseline pipeline."""
-    features = []
-    for j in range(sequence.shape[1]):
-        signal = sequence[:, j]
-        features.extend([
-            signal.mean(),
-            signal.std(),
-            signal.min(),
-            signal.max(),
-        ])
-    return np.asarray(features, dtype=np.float64).reshape(1, -1)
-
-
-def summarize_sequence_for_rf(sequence):
-    """Match RF training order: all means, stds, mins, then maxes."""
-    return np.concatenate([
-        sequence.mean(axis=0),
-        sequence.std(axis=0),
-        sequence.min(axis=0),
-        sequence.max(axis=0),
-    ]).astype(np.float64).reshape(1, -1)
-
-
-st.title("🏋️ LiftSafe")
-st.subheader("Lifting Motion & Posture Analysis")
-st.write(
-    "Explore recorded lifting trials, examine posture-related measurements, "
-    "and view the model's predicted INAIL lifting condition."
+render_page_header(
+    "Lifting motion, made clearer",
+    "Review recorded trials, posture measurements, and experimental model scores.",
+    eyebrow="LIFTSAFE  /  OVERVIEW",
 )
 
 st.warning(
@@ -99,19 +88,39 @@ except Exception as exc:
     st.error(f"Could not load the project data or model: {exc}")
     st.stop()
 
+if sequences.ndim != 3 or sequences.shape[1:] != (64, 4):
+    st.error(f"Expected sequences shaped (trials, 64, 4); found {sequences.shape}.")
+    st.stop()
+
 if len(sequences) != len(metadata):
     st.error("The sequence count does not match the metadata row count.")
     st.stop()
 
-st.sidebar.header("Trial selection")
-subject_options = sorted(metadata["subject_id"].unique())
-subject = st.sidebar.selectbox("Subject", subject_options)
+render_section_heading("Project status", "Saved assets and dataset snapshot available locally")
+status_cols = st.columns(4)
+status_cols[0].metric("Recorded trials", len(metadata))
+status_cols[1].metric("Subjects", metadata["subject_id"].nunique())
+status_cols[2].metric("Saved classifiers", "2 ready")
+status_cols[3].metric("Sequence input", f"{sequences.shape[1]} × {sequences.shape[2]}")
 
-subject_rows = metadata[metadata["subject_id"] == subject]
-trial_options = subject_rows["trial"].tolist()
-trial_name = st.sidebar.selectbox("Lifting trial", trial_options)
+required_metadata = {
+    "subject_id", "trial", "li_condition", "lifting_duration_seconds"
+}
+if not required_metadata.issubset(metadata.columns):
+    st.error("The lifting metadata is missing required trial fields.")
+    st.stop()
 
-matches = metadata.index[metadata["trial"] == trial_name].tolist()
+with st.sidebar:
+    with st.container(border=True):
+        st.header("Trial selection")
+        subject_options = sorted(metadata["subject_id"].unique())
+        subject = st.selectbox("Subject", subject_options)
+
+        subject_rows = metadata[metadata["subject_id"] == subject]
+        trial_options = subject_rows["trial"].tolist()
+        trial_name = st.selectbox("Lifting trial", trial_options)
+
+matches = subject_rows.index[subject_rows["trial"] == trial_name].tolist()
 if not matches:
     st.error("The selected trial was not found.")
     st.stop()
@@ -120,14 +129,34 @@ idx = matches[0]
 row = metadata.iloc[idx]
 sequence = sequences[idx]
 
-features = summarize_sequence(sequence)
-prediction = int(model.predict(features)[0])
-probabilities = model.predict_proba(features)[0]
-rf_features = summarize_sequence_for_rf(sequence)
-rf_prediction = int(rf_model.predict(rf_features)[0])
-rf_probabilities = rf_model.predict_proba(rf_features)[0]
+try:
+    comparison = compare_model_predictions(model, rf_model, sequence)
+    prediction = comparison["logistic_prediction"]
+    rf_prediction = comparison["random_forest_prediction"]
+    probabilities = model.predict_proba(comparison["logistic_features"])[0]
+    rf_probabilities = rf_model.predict_proba(
+        comparison["random_forest_features"]
+    )[0]
+except Exception as exc:
+    st.error(f"The selected trial could not be scored by both models: {exc}")
+    st.stop()
 
-st.divider()
+if (
+    probabilities.shape != (len(model.classes_),)
+    or rf_probabilities.shape != (len(rf_model.classes_),)
+    or not np.isfinite(probabilities).all()
+    or not np.isfinite(rf_probabilities).all()
+    or (probabilities < 0).any()
+    or (probabilities > 1).any()
+    or (rf_probabilities < 0).any()
+    or (rf_probabilities > 1).any()
+    or not np.isclose(probabilities.sum(), 1.0, atol=1e-4)
+    or not np.isclose(rf_probabilities.sum(), 1.0, atol=1e-4)
+):
+    st.error("A saved model returned invalid scores for its class labels.")
+    st.stop()
+
+render_section_heading("Selected recorded trial", f"{subject} · {trial_name}")
 c1, c2, c3, c4, c5 = st.columns(5)
 c1.metric("Subject", row["subject_id"])
 c2.metric("Actual LI condition", f"LI {int(row['li_condition'])}")
@@ -135,34 +164,69 @@ c3.metric("Logistic Regression", f"LI {prediction}")
 c4.metric("Random Forest", f"LI {rf_prediction}")
 c5.metric("Lifting duration", f"{row['lifting_duration_seconds']:.2f} s")
 
-st.subheader("Model prediction comparison")
-st.write(
-    "These models predict experimental LI conditions, not safe/unsafe labels. "
-    "Their scores are not calibrated safety probabilities."
+render_section_heading(
+    "Model scores",
+    "Experimental LI-condition predictions · scores are not calibrated safety probabilities.",
 )
+
+if comparison["agree"]:
+    st.success(
+        f"Model agreement: both predict LI {prediction}. Agreement is not "
+        "evidence that the prediction is correct or that the lift is safe."
+    )
+else:
+    st.warning(
+        f"Model disagreement: Logistic Regression predicts LI {prediction}; "
+        f"Random Forest predicts LI {rf_prediction}. Review the trial and "
+        "measurements; neither prediction establishes safety."
+    )
+
+training_subjects = {f"S{i:02d}" for i in range(1, 11)}
+if row["subject_id"] in training_subjects:
+    st.caption(
+        "This subject was included in the final models' training data. "
+        "The selected-trial prediction is not a held-out evaluation."
+    )
+else:
+    st.caption(
+        "This subject is outside the saved models' training subjects; this "
+        "single-trial prediction is still exploratory, not an evaluation."
+    )
 
 left, right = st.columns(2)
 with left:
-    st.markdown("#### Logistic Regression")
+    render_section_heading("Logistic Regression", "Experimental LI-condition model scores")
     probability_frame = pd.DataFrame({
         "LI condition": [f"LI {int(c)}" for c in model.classes_],
         "Model score": probabilities,
     })
-    st.bar_chart(
-        probability_frame, x="LI condition", y="Model score", width="stretch"
+    render_glass_chart(
+        bar_figure(
+            probability_frame["LI condition"].tolist(),
+            probability_frame["Model score"].tolist(),
+            name="Model score",
+            y_title="Model score (not calibrated probability)",
+        ),
+        key="dashboard_logistic_scores",
     )
 
 with right:
-    st.markdown("#### Random Forest")
+    render_section_heading("Random Forest", "Experimental LI-condition model scores")
     rf_probability_frame = pd.DataFrame({
         "LI condition": [f"LI {int(c)}" for c in rf_model.classes_],
         "Model score": rf_probabilities,
     })
-    st.bar_chart(
-        rf_probability_frame, x="LI condition", y="Model score", width="stretch"
+    render_glass_chart(
+        bar_figure(
+            rf_probability_frame["LI condition"].tolist(),
+            rf_probability_frame["Model score"].tolist(),
+            name="Model score",
+            y_title="Model score (not calibrated probability)",
+        ),
+        key="dashboard_forest_scores",
     )
 
-st.subheader("Posture measurements over the lifting sequence")
+render_section_heading("Posture measurements", "Recorded motion-capture sequence · 64 resampled steps")
 
 # Plot angles together because they share the same unit: degrees.
 angle_data = pd.DataFrame({
@@ -170,8 +234,17 @@ angle_data = pd.DataFrame({
 })
 angle_data.index.name = "Resampled time step (0–63)"
 
-st.markdown("#### Trunk and joint angles (degrees)")
-st.line_chart(angle_data, width="stretch")
+render_section_heading("Trunk and joint angles", "Degrees · three motion features")
+render_glass_chart(
+    line_figure(
+        angle_data,
+        None,
+        FEATURE_NAMES[:3],
+        x_title="Resampled sequence step",
+        y_title="Angle (degrees)",
+    ),
+    key="dashboard_motion_angles",
+)
 
 # Plot angular change separately because its unit is degrees per second.
 speed_data = pd.DataFrame({
@@ -179,10 +252,20 @@ speed_data = pd.DataFrame({
 })
 speed_data.index.name = "Resampled time step (0–63)"
 
-st.markdown("#### Trunk angular change (degrees/second)")
-st.line_chart(speed_data, width="stretch")
+render_section_heading("Trunk angular change", "Degrees per second")
+render_glass_chart(
+    line_figure(
+        speed_data,
+        None,
+        [FEATURE_NAMES[3]],
+        x_title="Resampled sequence step",
+        y_title="Angular change (°/s)",
+        height=280,
+    ),
+    key="dashboard_trunk_velocity",
+)
 
-st.subheader("Trial details")
+render_section_heading("Trial details", "Summary of the selected sequence")
 details = pd.DataFrame({
     "Measurement": FEATURE_NAMES,
     "Mean": [sequence[:, j].mean() for j in range(4)],
@@ -218,11 +301,15 @@ report.insert(0, "Subject", row["subject_id"])
 report.insert(1, "Trial", row["trial"])
 report["Actual LI condition"] = int(row["li_condition"])
 report["Predicted LI condition"] = prediction
+report["Random Forest predicted LI condition"] = rf_prediction
+report["Models agree"] = comparison["agree"]
 
-for class_id, probability in zip(model.classes_, probabilities):
-    report[f"Probability LI {int(class_id)}"] = round(
-        float(probability), 4
+for class_id, score in zip(model.classes_, probabilities):
+    report[f"Logistic Regression score LI {int(class_id)}"] = round(
+        float(score), 4
     )
+for class_id, score in zip(rf_model.classes_, rf_probabilities):
+    report[f"Random Forest score LI {int(class_id)}"] = round(float(score), 4)
 
 st.download_button(
     label="Download trial report (CSV)",

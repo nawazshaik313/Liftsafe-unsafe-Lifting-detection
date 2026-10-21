@@ -1,0 +1,4 @@
+# Additional packages for dataset preparation and Temporal CNN training.
+-r requirements.txt
+scipy
+torch

@@ -26,6 +26,8 @@ html, body, [data-testid="stAppViewContainer"] {
     radial-gradient(ellipse at 67% 82%, rgba(43, 104, 186, .20), transparent 40%),
     linear-gradient(135deg, #111326 0%, #0a1728 52%, #10192c 100%);
   background-attachment: fixed;
+  background-size: 180% 180%;
+  animation: ls-water-flow 20s ease-in-out infinite;
 }
 [data-testid="stHeader"] {
   background: rgba(9, 17, 31, .52);
@@ -44,6 +46,10 @@ html, body, [data-testid="stAppViewContainer"] {
   0% { opacity: .52; transform: translate(-50%, -50%) scale(.15); }
   72% { opacity: .2; }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(4.6); }
+}
+@keyframes ls-water-flow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 /* Enlarge Streamlit's logo beyond its built-in 32px "large" limit. */
 [data-testid="stLogo"] img {
@@ -326,7 +332,8 @@ h1, h2, h3, h4, p, li, label,
 [data-testid="stButton"] button::after,
 [data-testid="stDownloadButton"] button::after,
 [data-testid="stSidebarNav"] a::after,
-[data-testid="stSegmentedControl"] button::after {
+[data-testid="stSegmentedControl"] button::after,
+[data-testid="stIconButton"] button::after {
   content: "";
   position: absolute;
   z-index: 1;
@@ -347,11 +354,21 @@ h1, h2, h3, h4, p, li, label,
 [data-testid="stSidebarNav"] a:active::after,
 [data-testid="stSidebarNav"] a:focus::after,
 [data-testid="stSegmentedControl"] button:active::after,
-[data-testid="stSegmentedControl"] button:focus::after {
+[data-testid="stSegmentedControl"] button:focus::after,
+[data-testid="stIconButton"] button:active::after,
+[data-testid="stIconButton"] button:focus::after {
   animation: ls-water-ripple .68s ease-out;
 }
+[data-testid="stButton"] button:hover::after,
+[data-testid="stDownloadButton"] button:hover::after,
+[data-testid="stSidebarNav"] a:hover::after,
+[data-testid="stSegmentedControl"] button:hover::after,
+[data-testid="stIconButton"] button:hover::after {
+  animation: ls-water-ripple 1.2s ease-out infinite;
+}
 [data-testid="stSidebarNav"] a,
-[data-testid="stSegmentedControl"] button {
+[data-testid="stSegmentedControl"] button,
+[data-testid="stIconButton"] button {
   position: relative;
   overflow: hidden;
   isolation: isolate;
@@ -423,6 +440,8 @@ html, body { background: var(--ls-bg); }
     radial-gradient(ellipse at 100% 75%, rgba(232,126,198,.36), transparent 38%),
     linear-gradient(128deg, #e5d8f5 0%, #dce8fb 43%, #d8eff5 74%, #f1dced 100%) !important;
   background-attachment: fixed !important;
+  background-size: 180% 180%;
+  animation: ls-water-flow 20s ease-in-out infinite;
 }
 [data-testid="stMain"], [data-testid="stMainBlockContainer"],
 [data-testid="stBottomBlockContainer"] { background: transparent !important; }

@@ -26,7 +26,10 @@ class GlassChartTests(unittest.TestCase):
         self.assertEqual(figure.layout.font.color, "#e9edfa")
 
     def test_score_bars_keep_real_values_on_transparent_canvas(self):
-        figure = bar_figure(["LI 1", "LI 2"], [0.7, 0.3], name="Score")
+        # Pin the palette so this invariant stays independent of the user's
+        # configured default appearance (currently Light).
+        with patch("src.charts.get_theme_mode", return_value="Dark"):
+            figure = bar_figure(["LI 1", "LI 2"], [0.7, 0.3], name="Score")
         self.assertEqual(list(figure.data[0].y), [0.7, 0.3])
         self.assertEqual(figure.layout.paper_bgcolor, "rgba(0,0,0,0)")
         self.assertEqual(figure.layout.plot_bgcolor, "rgba(255,255,255,0.012)")

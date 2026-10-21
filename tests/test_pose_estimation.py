@@ -173,14 +173,20 @@ class PoseEstimationTests(unittest.TestCase):
         next_video = tracker.select([make_person(0.8, trunk_angle=35)], 640, 360)
         self.assertEqual(first.target_id, next_video.target_id)
 
-    def test_long_target_exit_releases_old_track_before_reacquiring(self):
+    def test_lost_target_never_silently_switches_to_new_person(self):
         tracker = PoseTargetTracker(max_misses=1)
         original = tracker.select([make_person(0.72, trunk_angle=45)], 640, 360)
         self.assertEqual(tracker.select([], 640, 360).state, "target_lost")
-        self.assertEqual(tracker.select([], 640, 360).state, "no_person")
-        entrant = tracker.select([make_person(0.25, trunk_angle=5)], 640, 360)
-        self.assertEqual(entrant.state, "selected")
-        self.assertNotEqual(entrant.target_id, original.target_id)
+        self.assertEqual(tracker.select([], 640, 360).state, "target_lost")
+        # Even after the legacy miss limit, an unrelated bystander remains
+        # unselected until the operator explicitly changes the target.
+        lost = tracker.select([make_person(0.25, trunk_angle=5)], 640, 360)
+        self.assertEqual(lost.state, "target_lost")
+        self.assertEqual(lost.target_id, original.target_id)
+        tracker.request_manual_candidate(1)
+        selected = tracker.select([make_person(0.25, trunk_angle=5)], 640, 360)
+        self.assertEqual(selected.state, "selected")
+        self.assertNotEqual(selected.target_id, original.target_id)
 
     def test_mediapipe_estimator_requests_multiple_people_on_cpu(self):
         class DummyLandmarker:

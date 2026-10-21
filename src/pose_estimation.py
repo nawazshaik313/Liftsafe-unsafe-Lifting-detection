@@ -116,6 +116,9 @@ class PoseTargetTracker:
         self, *, max_misses=8, ambiguity_margin=0.08, preferred_region="auto",
         manual_target_center=None,
     ):
+        # Keep the configured value for callers that inspect tracker settings.
+        # A lock is deliberately not released after a timeout: doing so can
+        # silently transfer measurements to a bystander.
         self.max_misses = max_misses
         self.ambiguity_margin = ambiguity_margin
         self.preferred_region = preferred_region
@@ -147,12 +150,8 @@ class PoseTargetTracker:
         if not count:
             if self._target_id is not None:
                 self._misses += 1
-                if self._misses <= self.max_misses:
-                    return TargetSelection(None, "target_lost", self._target_id, None, 0,
-                                           reason="Selected target not detected; holding track.")
-                next_id = self._next_id
-                self.reset()
-                self._next_id = next_id
+                return TargetSelection(None, "target_lost", self._target_id, None, 0,
+                                       reason="Selected target not detected; holding lock until it is matched again or manually changed.")
             return TargetSelection(None, "no_person", None, None, 0,
                                    reason="No valid multi-pose candidates detected.")
 
@@ -228,13 +227,9 @@ class PoseTargetTracker:
                                        bbox=chosen["box"], reason="Matched prior target by box overlap and center continuity.",
                                        candidates=summaries)
             self._misses += 1
-            if self._misses <= self.max_misses:
-                return TargetSelection(None, "target_lost", self._target_id, None, count,
-                                       reason="No candidate matched the tracked person's box; refusing to switch.",
-                                       candidates=summaries)
-            next_id = self._next_id
-            self.reset()
-            self._next_id = next_id
+            return TargetSelection(None, "target_lost", self._target_id, None, count,
+                                   reason="No candidate matched the tracked person's box; refusing to switch.",
+                                   candidates=summaries)
 
         if self.preferred_region in {"left", "center", "right"}:
             in_region = [

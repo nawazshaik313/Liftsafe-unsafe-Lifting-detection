@@ -8,8 +8,10 @@ from unittest.mock import patch
 
 import cv2
 import numpy as np
+import pandas as pd
 
 from src import video_processing
+from src.pose_estimation import PoseFrame
 
 
 class FakePose:
@@ -49,6 +51,61 @@ class VideoProcessingTests(unittest.TestCase):
         upload = io.BytesIO(payload)
         upload.name = name
         return video_processing.process_video(upload, NoOpProgress(), NoOpStatus())
+
+    def test_frame_status_requires_real_trunk_measurement(self):
+        status = video_processing.frame_measurement_status
+        self.assertEqual(status("no_person", {}, 45), "No person detected")
+        self.assertEqual(status("target_lost", {}, 45), "Target person lost")
+        self.assertEqual(status("target_ambiguous", {}, 45), "Target selection ambiguous")
+        self.assertEqual(status("incomplete_landmarks", {}, 45), "Insufficient landmark visibility")
+        self.assertEqual(status("measurements_available", {"Trunk inclination (°)": 45}, 45), "Review threshold exceeded")
+        self.assertEqual(status("measurements_available", {"Trunk inclination (°)": 20}, 45), "Within configured review threshold")
+
+    def test_upload_change_clears_results_but_same_upload_keeps_them(self):
+        state = {
+            "liftsafe_video_upload_key": "video-a",
+            "liftsafe_video_bytes": b"annotated",
+            "liftsafe_video_csv": "measurements",
+            "liftsafe_video_fps": 30.0,
+            "liftsafe_video_threshold": 45,
+        }
+        self.assertFalse(video_processing.clear_video_results_for_upload(state, "video-a"))
+        self.assertEqual(state["liftsafe_video_csv"], "measurements")
+        self.assertTrue(video_processing.clear_video_results_for_upload(state, "video-b"))
+        self.assertNotIn("liftsafe_video_csv", state)
+        self.assertNotIn("liftsafe_video_threshold", state)
+        self.assertEqual(state["liftsafe_video_upload_key"], "video-b")
+
+    @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg is not installed")
+    def test_processed_measurement_history_keeps_timestamps_flags_and_missing_values(self):
+        payload = self._short_video(frame_count=3)
+        results = iter((
+            PoseFrame(None, True, "measurements_available", 0.9,
+                      {"Trunk inclination (°)": 60.0}, 1, 7, 0.9, 1),
+            PoseFrame(None, True, "incomplete_landmarks", 0.3, {}, 1, 7, 0.8, 1),
+            PoseFrame(None, True, "measurements_available", 0.9,
+                      {"Trunk inclination (°)": 30.0}, 1, 7, 0.9, 1),
+        ))
+        with (
+            patch.object(video_processing, "create_pose_estimator", return_value=FakePose()),
+            patch.object(video_processing, "analyze_pose_frame", side_effect=lambda *_: next(results)),
+        ):
+            _, history, fps = self._run(payload)
+        self.assertEqual(fps, 10.0)
+        self.assertEqual(history["time_seconds"].tolist(), [0.0, 0.1, 0.2])
+        self.assertEqual(history["trunk_inclination_2d_deg"].iloc[[0, 2]].tolist(), [60.0, 30.0])
+        self.assertTrue(np.isnan(history["trunk_inclination_2d_deg"].iloc[1]))
+        self.assertEqual(history["measurement_status"].tolist(), [
+            "Review threshold exceeded",
+            "Insufficient landmark visibility",
+            "Within configured review threshold",
+        ])
+        self.assertEqual(history["posture_review_flag"].iloc[0], True)
+        self.assertTrue(np.isnan(history["posture_review_flag"].iloc[1]))
+        self.assertEqual(history["posture_review_flag"].iloc[2], False)
+        csv_round_trip = pd.read_csv(io.StringIO(history.to_csv(index=False)))
+        self.assertEqual(csv_round_trip["trunk_inclination_2d_deg"].iloc[0], 60.0)
+        self.assertTrue(np.isnan(csv_round_trip["trunk_inclination_2d_deg"].iloc[1]))
 
     def _short_video(self, frame_count=3):
         with tempfile.TemporaryDirectory(prefix="liftsafe_test_input_") as source_dir:

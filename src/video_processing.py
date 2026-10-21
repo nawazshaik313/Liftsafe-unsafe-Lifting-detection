@@ -31,6 +31,38 @@ MAX_VIDEO_PROCESSING_SECONDS = 600
 SUPPORTED_SUFFIXES = {".mp4", ".mov", ".avi"}
 
 
+def clear_video_results_for_upload(session_state, upload_key):
+    """Drop cached output when the selected upload changes; keep it on reruns."""
+    if (
+        "liftsafe_video_upload_key" in session_state
+        and session_state.get("liftsafe_video_upload_key") == upload_key
+    ):
+        return False
+    for key in (
+        "liftsafe_video_bytes", "liftsafe_video_csv", "liftsafe_video_fps",
+        "liftsafe_video_threshold",
+    ):
+        session_state.pop(key, None)
+    session_state["liftsafe_video_upload_key"] = upload_key
+    return True
+
+
+def frame_measurement_status(target_state, measurements, threshold):
+    """Describe only a state supported by the current frame's measurements."""
+    if target_state == "target_lost":
+        return "Target person lost"
+    if target_state == "target_ambiguous":
+        return "Target selection ambiguous"
+    if target_state == "no_person":
+        return "No person detected"
+    trunk = measurements.get("Trunk inclination (°)")
+    if trunk is None or not np.isfinite(trunk):
+        return "Insufficient landmark visibility"
+    if trunk >= threshold:
+        return "Review threshold exceeded"
+    return "Within configured review threshold"
+
+
 class VideoProcessingError(RuntimeError):
     """A user-safe video failure with its processing stage and diagnostic detail."""
 
@@ -429,7 +461,14 @@ def process_video(
 
                         measurements = pose_result.measurements
                         trunk = measurements.get("Trunk inclination (°)")
-                        review = trunk is not None and trunk >= threshold
+                        review = (
+                            bool(trunk >= threshold)
+                            if trunk is not None and np.isfinite(trunk)
+                            else None
+                        )
+                        measurement_status = frame_measurement_status(
+                            pose_result.state, measurements, threshold
+                        )
                         row = {
                             "frame": frame_index,
                             "time_seconds": frame_index / fps,
@@ -440,6 +479,7 @@ def process_video(
                             "people_detected": pose_result.person_count,
                             "candidate_number": pose_result.candidate_number,
                             "selection_reason": pose_result.selection_reason,
+                            "measurement_status": measurement_status,
                             "candidate_diagnostics": json.dumps([
                                 {
                                     **candidate,
@@ -456,7 +496,9 @@ def process_video(
                                 pose_result.visibility
                                 if pose_result.visibility is not None else np.nan
                             ),
-                            "posture_review_flag": bool(review),
+                            # Preserve missing as missing; invalid frames are not
+                            # equivalent to frames that passed the threshold.
+                            "posture_review_flag": review if review is not None else np.nan,
                             "trunk_inclination_2d_deg": measurements.get(
                                 "Trunk inclination (°)", np.nan
                             ),
@@ -499,6 +541,12 @@ def process_video(
                                 f"Trunk inclination: {trunk:.1f} deg (threshold {threshold} deg)",
                                 (20, 58), cv2.FONT_HERSHEY_SIMPLEX, 0.55,
                                 (255, 255, 255), 1, cv2.LINE_AA,
+                            )
+                        elif pose_result.landmarks is None:
+                            cv2.putText(
+                                frame, measurement_status, (18, 32),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.65,
+                                (255, 255, 255), 2, cv2.LINE_AA,
                             )
                         rows.append(row)
                         writer.write(frame)

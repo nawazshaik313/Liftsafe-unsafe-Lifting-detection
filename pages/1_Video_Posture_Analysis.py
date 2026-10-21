@@ -1,4 +1,5 @@
 import logging
+import hashlib
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -16,6 +17,7 @@ from src.video_processing import (
     VideoProcessingError,
     inspect_video_first_frame,
     process_video,
+    clear_video_results_for_upload,
     render_target_selection_preview,
 )
 
@@ -73,13 +75,21 @@ with st.container(border=True):
         ),
     )
 
+upload_key = None
+if uploaded_video is not None:
+    upload_digest = hashlib.sha256(uploaded_video.getvalue()).hexdigest()[:16]
+    upload_key = (
+        f"{getattr(uploaded_video, 'file_id', uploaded_video.name)}-"
+        f"{uploaded_video.name}-{uploaded_video.size}-{upload_digest}"
+    )
+
+# Results belong to one exact upload. Clear them as soon as the selected
+# upload changes (including removal), rather than waiting for Analyze.
+clear_video_results_for_upload(st.session_state, upload_key)
+
 if uploaded_video is not None:
 
     st.caption(f"Selected file: {uploaded_video.name}")
-    upload_key = (
-        f"{getattr(uploaded_video, 'file_id', uploaded_video.name)}-"
-        f"{uploaded_video.name}-{uploaded_video.size}"
-    )
     if st.session_state.get("target_preview_upload_key") != upload_key:
         st.session_state.pop("target_preview_frame", None)
         st.session_state.pop("target_preview_candidates", None)
@@ -155,6 +165,7 @@ if uploaded_video is not None:
             "liftsafe_video_bytes",
             "liftsafe_video_csv",
             "liftsafe_video_fps",
+            "liftsafe_video_threshold",
         ):
             st.session_state.pop(key, None)
 
@@ -176,6 +187,8 @@ if uploaded_video is not None:
             st.session_state["liftsafe_video_csv"] = data
 
             st.session_state["liftsafe_video_fps"] = fps
+
+            st.session_state["liftsafe_video_threshold"] = threshold
 
             ambiguous_frames = int(
                 data.get("target_state", pd.Series(dtype=str)).eq("target_ambiguous").sum()
@@ -234,6 +247,15 @@ if "liftsafe_video_csv" in st.session_state:
 
     data = st.session_state["liftsafe_video_csv"]
 
+    analysis_threshold = float(
+        st.session_state.get("liftsafe_video_threshold", threshold)
+    )
+    if analysis_threshold != threshold:
+        st.info(
+            f"These saved results use a {analysis_threshold:g}° review threshold. "
+            "Click Analyze video to apply the current slider setting."
+        )
+
     video_bytes = st.session_state.get("liftsafe_video_bytes")
 
     if video_bytes:
@@ -255,17 +277,17 @@ if "liftsafe_video_csv" in st.session_state:
         ]
         st.dataframe(data[diagnostic_columns].head(100), width="stretch")
 
-    detected = int(data["pose_detected"].sum())
+    usable = int(data["trunk_inclination_2d_deg"].notna().sum())
 
-    coverage = detected / total_frames * 100 if total_frames else 0
+    coverage = usable / total_frames * 100 if total_frames else 0
 
     render_section_heading("Analysis summary", "Frame coverage and landmark visibility")
 
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
 
     c1.metric("Frames processed", total_frames)
 
-    c2.metric("Pose detected", f"{detected} / {total_frames}")
+    c2.metric("Usable trunk measurements", f"{usable} / {total_frames}")
 
     c3.metric("Detection coverage", f"{coverage:.1f}%")
 
@@ -273,6 +295,18 @@ if "liftsafe_video_csv" in st.session_state:
         confidence = data["landmark_confidence"].dropna()
         confidence_label = f"{confidence.mean() * 100:.0f}%" if not confidence.empty else "—"
         c4.metric("Mean keypoint visibility", confidence_label)
+    selected_ids = data.loc[data["pose_detected"], "target_id"].dropna()
+    target_label = f"Person {int(selected_ids.mode().iloc[0])}" if not selected_ids.empty else "—"
+    c5.metric("Selected target", target_label)
+
+    statuses = data.get("measurement_status", pd.Series(dtype=str))
+    current_status = statuses.iloc[-1] if not statuses.empty else "No measurement status"
+    if current_status == "Review threshold exceeded":
+        st.warning(f"Current status: {current_status} (experimental review flag only).")
+    elif current_status == "Within configured review threshold":
+        st.success(f"Current status: {current_status}.")
+    else:
+        st.info(f"Current status: {current_status}.")
 
     render_section_heading("Posture angles over time", "Approximate 2D geometry in degrees")
 
@@ -364,7 +398,7 @@ if "liftsafe_video_csv" in st.session_state:
 
     else:
 
-        flagged = valid_trunk >= threshold
+        flagged = valid_trunk >= analysis_threshold
 
         flagged_count = int(flagged.sum())
 
@@ -378,7 +412,7 @@ if "liftsafe_video_csv" in st.session_state:
 
         c2.metric("Flagged frames", f"{flagged_percent:.1f}%")
 
-        c3.metric("Review threshold", f"{threshold}°")
+        c3.metric("Review threshold", f"{analysis_threshold}°")
 
         if flagged_count:
 
@@ -410,7 +444,7 @@ if "liftsafe_video_csv" in st.session_state:
 
         screening_data["review_flag"] = (
 
-            screening_data["trunk_inclination_2d_deg"] >= threshold
+            screening_data["trunk_inclination_2d_deg"] >= analysis_threshold
 
         )
 
@@ -432,14 +466,16 @@ if "liftsafe_video_csv" in st.session_state:
             ]
         ].copy()
 
-        timeline_data["posture_review_flag"] = (
-            timeline_data["posture_review_flag"]
-            .fillna(False)
-            .astype(bool)
+        valid_review = timeline_data["trunk_inclination_2d_deg"].notna()
+        timeline_data["review_value"] = np.where(
+            valid_review,
+            timeline_data["posture_review_flag"].fillna(False).astype(bool).astype(int),
+            np.nan,
         )
-
-        timeline_data["review_value"] = (
-            timeline_data["posture_review_flag"].astype(int)
+        # Use false only to segment intervals; missing measurements remain
+        # gaps in the plotted timeline and are never counted as passes.
+        timeline_data["posture_review_flag"] = (
+            timeline_data["posture_review_flag"].fillna(False).astype(bool)
         )
 
         st.caption(
@@ -599,7 +635,7 @@ if "liftsafe_video_csv" in st.session_state:
                 labels={"trunk_inclination_2d_deg": "Trunk inclination"},
                 x_title="Time (seconds)",
                 y_title="Angle (degrees)",
-                threshold=float(threshold),
+                threshold=analysis_threshold,
                 height=300,
             ),
             key="video_trunk_screening",
@@ -615,7 +651,7 @@ if "liftsafe_video_csv" in st.session_state:
 
             if flagged_rows.empty:
 
-                st.info("No frames exceeded the selected threshold.")
+                st.info("No frames exceeded the analysis threshold.")
 
             else:
 
